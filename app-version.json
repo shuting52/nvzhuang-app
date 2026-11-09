@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.3.3/Shuting-Shiyijian-1.3.3.apk","notes":{"add":["授权后自动接着装：首次更新开一次“允许安装未知应用”，回来不用再点、自动调起安装"],"optimize":["背景换成极光壁纸：深底 + 柔和光晕，去掉网格和硬边彩点，玻璃折射更明显"],"remove":[]},"versionCode":7,"versionName":"1.3.3"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.3.4/Shuting-Shiyijian-1.3.4.apk","notes":{"add":[],"optimize":["更新检查与下载加自动重试：网关超时（502/503/504）或网络抖动自动重下 3 次，不用手动再点"],"remove":[]},"versionCode":8,"versionName":"1.3.4"}

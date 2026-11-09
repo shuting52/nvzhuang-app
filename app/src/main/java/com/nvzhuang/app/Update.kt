@@ -100,7 +100,19 @@ fun currentVersionName(context: Context): String {
     }
 }
 
+/** 查版本文件。网关超时（502/503/504）或网络抖动时自动重试 3 次，不用手动再点。 */
 suspend fun fetchUpdateInfo(): Result<UpdateInfo> {
+    var lastError: Exception? = null
+    repeat(3) { attempt ->
+        if (attempt > 0) delay(if (attempt == 1) 1500L else 3000L)
+        val r = fetchUpdateInfoOnce()
+        r.onSuccess { return r }
+        lastError = r.exceptionOrNull() as? Exception
+    }
+    return Result.failure(lastError ?: Exception("检查更新失败"))
+}
+
+private suspend fun fetchUpdateInfoOnce(): Result<UpdateInfo> {
     return try {
         val text = withContext(Dispatchers.IO) {
             val conn = (URL(UPDATE_JSON_URL).openConnection() as HttpURLConnection).apply {
@@ -137,14 +149,37 @@ class UpdateDownloader {
         cancelled.set(true)
     }
 
-    /** 下载 APK 到目标文件，onProgress 回传 0f..1f（总长未知时回传 -1f）。取消时返回失败。 */
+    /** 下载 APK 到目标文件，onProgress 回传 0f..1f（总长未知时回传 -1f）。取消时返回失败。
+     *  网关超时（502/503/504）或网络超时自动重试 3 次；404 等不重试；取消不重试。 */
     suspend fun download(url: String, dest: File, onProgress: (Float) -> Unit): Result<File> {
         cancelled.set(false)
+        var lastError: Exception? = null
+        repeat(3) { attempt ->
+            if (attempt > 0) delay(if (attempt == 1) 2000L else 4000L)
+            val result = downloadOnce(url, dest, onProgress)
+            result.onSuccess { return result }
+            val e = result.exceptionOrNull() as? Exception ?: return result
+            if (e.message == "CANCELLED") return result
+            lastError = e
+            if (!isRetryable(e)) return result
+        }
+        return Result.failure(lastError ?: Exception("下载失败"))
+    }
+
+    private fun isRetryable(e: Exception): Boolean {
+        val m = e.message ?: return true
+        if (m.contains("HTTP 502") || m.contains("HTTP 503") || m.contains("HTTP 504")) return true
+        if (e is java.net.SocketTimeoutException) return true
+        if (m.contains("timeout", ignoreCase = true)) return true
+        return false
+    }
+
+    private suspend fun downloadOnce(url: String, dest: File, onProgress: (Float) -> Unit): Result<File> {
         return try {
             withContext(Dispatchers.IO) {
                 val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15000
-                    readTimeout = 30000
+                    readTimeout = 60000
                     connect()
                 }
                 if (conn.responseCode !in 200..299) throw Exception("下载失败：HTTP ${conn.responseCode}")
