@@ -2,6 +2,8 @@ package com.nvzhuang.app
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +51,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -69,7 +72,10 @@ import com.kyant.backdrop.catalog.components.LiquidBottomTabs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.random.Random
 
 // ---------- 通用小组件（主题见 Theme.kt，取自 boli） ----------
@@ -125,6 +131,53 @@ fun ActionButton(text: String, primary: Boolean, onClick: () -> Unit, modifier: 
         contentAlignment = Alignment.Center,
     ) {
         T(text, 14, if (primary) Color.White else p.text, bold = primary)
+    }
+}
+
+// 原生日夜开关（Ludion toggle-daylight 的原生近似版：WebGL 像素场景进不了 APK）：
+// 药丸 + 滑动的太阳/月亮 + 夜晚星星，点一下切换深浅主题。
+@Composable
+fun DaylightToggle(dark: Boolean, onToggle: () -> Unit) {
+    val frac by animateFloatAsState(if (dark) 1f else 0f, tween(220), label = "daylight")
+    val sky = if (dark) Color(0xFF1B2146) else Color(0xFFF0E7D4)
+    val ring = if (dark) Color(0xFF2A3259) else Color(0xFFD6CDBA)
+    Canvas(
+        Modifier.width(64.dp).height(32.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable { onToggle() },
+    ) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(sky, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2))
+        drawRoundRect(ring, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2), style = Stroke(1.dp.toPx()))
+        if (dark) {
+            val stars = listOf(0.20f to 0.30f, 0.36f to 0.65f, 0.66f to 0.28f, 0.80f to 0.62f)
+            for ((fx, fy) in stars) {
+                drawCircle(Color.White.copy(alpha = 0.85f), 1.6.dp.toPx(), Offset(fx * w, fy * h))
+            }
+        }
+        // 滑块：左 = 太阳（昼），右 = 月亮（夜）
+        val r = 11.dp.toPx()
+        val cx = 4.dp.toPx() + r + frac * (w - 8.dp.toPx() - 2 * r)
+        val cy = h / 2
+        if (dark) {
+            drawCircle(Color(0xFFF0E7D4), r, Offset(cx, cy))
+            drawCircle(Color(0xFFD6CDBA), 3.dp.toPx(), Offset(cx + 3.dp.toPx(), cy - 2.dp.toPx()))
+            drawCircle(Color(0xFFD6CDBA), 2.dp.toPx(), Offset(cx - 3.dp.toPx(), cy + 3.dp.toPx()))
+        } else {
+            for (i in 0 until 8) {
+                val a = (i * 45f) * (PI / 180f)
+                val dx = cos(a).toFloat() * (r + 2.dp.toPx())
+                val dy = sin(a).toFloat() * (r + 2.dp.toPx())
+                val ex = cos(a).toFloat() * (r + 5.dp.toPx())
+                val ey = sin(a).toFloat() * (r + 5.dp.toPx())
+                drawLine(
+                    Color(0xFFEFA02C), Offset(cx + dx, cy + dy), Offset(cx + ex, cy + ey),
+                    strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
+                )
+            }
+            drawCircle(Color(0xFFEFA02C), r, Offset(cx, cy))
+        }
     }
 }
 
@@ -194,14 +247,10 @@ fun NvzhuangApp() {
                             T("淑婷试衣间", 22, bold = true)
                             T("AI 服装参考图集 · COSTUME-DB-01", 12, p.muted)
                         }
-                        Box(
-                            Modifier.clip(CircleShape)
-                                .glass(backdrop, glassSettings, p.glass, radiusDp = 24f)
-                                .clickable {
-                                    dark = !dark
-                                    saveDark(context, dark)
-                                }.padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) { T(if (dark) "☀️ 浅色" else "🌙 深色", 13) }
+                        DaylightToggle(dark = dark) {
+                            dark = !dark
+                            saveDark(context, dark)
+                        }
                     }
                     when (tab) {
                         0 -> GalleryTab(
@@ -394,7 +443,7 @@ fun GalleryCard(item: Item, isFav: Boolean, backdrop: Backdrop, onClick: () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
+        Modifier.clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .clickable { onClick() },
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(p.chipBg)) {
@@ -484,10 +533,10 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.3.6 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.3.7 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -525,7 +574,7 @@ fun GlassSettingsBlock(backdrop: Backdrop, onGlassChange: (GlassSettings) -> Uni
     }
     fun commit() { saveGlassSettings(context, s) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -628,7 +677,7 @@ fun AiSettingsBlock(backdrop: Backdrop) {
     var status by remember { mutableStateOf("") }
     var testing by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -682,7 +731,7 @@ fun AiField(label: String, value: String, password: Boolean, onChange: (String) 
 fun AboutBlock(title: String, body: String, backdrop: Backdrop, glass: GlassSettings) {
     val p = LocalPalette.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

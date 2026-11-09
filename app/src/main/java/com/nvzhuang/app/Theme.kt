@@ -20,9 +20,10 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.shapes.RoundedRectangle
 
 /**
- * 主题取自 boli（shuting52/boli，LandezhaoleGlass）：
- * 浅色 #FDFDFD / 深色 #121212（默认深色），品牌绿 #16A34A → 蓝 #0EA5E9 渐变，
+ * 主题取自 Ludion toggle-daylight（ludion.ai/p/toggle-daylight，MIT）：
+ * 浅色（昼）暖纸 #F5ECD9 / 深色（夜）藏青 #080A2D（默认深色），品牌琥珀 #FBAB3B → #EFA02C 渐变，
  * 极光壁纸（深底 + 柔和光晕，无网格），液态玻璃卡片，悬浮玻璃胶囊底栏。
+ * 5 个 token × 4 档 OKLab 明度 = 20 色，见 toggle-daylight 原代码。
  * 玻璃默认值同 boli：圆角 0.5、模糊 4dp、折射高度 0.2、折射强度 0.25、色散 1.0。
  */
 
@@ -33,17 +34,17 @@ data class Palette(
 )
 
 val LightPalette = Palette(
-    Color(0xFFFDFDFD), Color.White, Color(0xFF0D0D0D), Color(0xFF6C6C6C),
-    Color(0xFF0073E5), Color(0xFFE8EEF9), Color(0xFFDCE2EB), Color.White,
+    Color(0xFFF5ECD9), Color(0xFFFFFAEE), Color(0xFF1B2146), Color(0xFF7F97B3),
+    Color(0xFFEFA02C), Color(0xFFF0E7D4), Color(0xFFD6CDBA), Color(0xFFFFFAEE),
     Color.White.copy(alpha = 0.5f),
 )
 val DarkPalette = Palette(
-    Color(0xFF121212), Color(0xFF181818), Color.White, Color(0xB3CACACA),
-    Color(0xFF55CFFF), Color(0xFF232A35), Color(0xFF272C34), Color(0xFF1A1E24),
-    Color(0xFF121212).copy(alpha = 0.4f),
+    Color(0xFF080A2D), Color(0xFF181D42), Color(0xFFF0E7D4), Color(0xFF95ADCA),
+    Color(0xFFFBAB3B), Color(0xFF2A3259), Color(0xFF2A3259), Color(0xFF181D42),
+    Color(0xFF181D42).copy(alpha = 0.4f),
 )
 val LocalPalette = staticCompositionLocalOf { LightPalette }
-val BrandGradient = Brush.linearGradient(listOf(Color(0xFF16A34A), Color(0xFF0EA5E9)))
+val BrandGradient = Brush.linearGradient(listOf(Color(0xFFFBAB3B), Color(0xFFEFA02C)))
 
 /** 玻璃设置（boli GlassSettings，5 条滑杆），存在手机本地。 */
 data class GlassSettings(
@@ -86,16 +87,16 @@ fun saveGlassSettings(context: Context, s: GlassSettings) {
         .apply()
 }
 
-/** 极光壁纸：深底 + 大面积柔和径向光晕，没有网格、没有硬边圆点，给液态玻璃做折射底。
- *  玻璃要“透”，底就不能是平铺的亮色：深色底 + 柔和光晕，模糊和折射才看得出来。 */
+/** 极光壁纸：暖纸底（昼）/ 藏青底（夜）+ 大面积柔和径向光晕，没有网格、没有硬边圆点，给液态玻璃做折射底。
+ *  玻璃要“透”，底就不能是平铺的亮色：柔和光晕，模糊和折射才看得出来。 */
 @Composable
 fun Wallpaper(modifier: Modifier = Modifier) {
     val dark = LocalPalette.current == DarkPalette
     Canvas(modifier.fillMaxSize()) {
         drawRect(
             Brush.verticalGradient(
-                if (dark) listOf(Color(0xFF0B1020), Color(0xFF0C1F2B), Color(0xFF0A1420))
-                else listOf(Color(0xFFE9F1F6), Color(0xFFE4F0EC), Color(0xFFF3ECF7)),
+                if (dark) listOf(Color(0xFF080A2D), Color(0xFF0C1238), Color(0xFF080A2D))
+                else listOf(Color(0xFFF5ECD9), Color(0xFFF0E7D4), Color(0xFFFFFAEE)),
             )
         )
         // 每团光晕：中心色 → 透明，径向渐变天然柔和
@@ -122,13 +123,19 @@ fun Wallpaper(modifier: Modifier = Modifier) {
 
 private data class Blob(val x: Float, val y: Float, val color: Color, val alpha: Float, val r: Float)
 
+/** 玻璃圆角（dp）：glass() 的 shape 和外层 clip 必须用同一值。
+ *  之前 About/设置类卡片 clip 写死 12dp、glass() 默认按 8+圆角*40 算，
+ *  两者不一致时四角会出现壁纸透进来的缺角（圆角 0.2 时玻璃 16dp、clip 12dp）。 */
+fun glassRadiusDp(settings: GlassSettings, radiusDp: Float? = null): Float =
+    radiusDp ?: (8f + settings.corner * 40f)
+
 /** boli 的玻璃面板写法：vibrancy + blur + lens，圆角/模糊/折射跟玻璃设置走。
  *  surface 用半透明色（如 p.glass）时，壁纸会透过折射进来；用 p.card 则接近实色玻璃。
  *  radiusDp 给定时用它，否则按玻璃设置的圆角换算。 */
 fun Modifier.glass(backdrop: Backdrop, settings: GlassSettings, surface: Color, radiusDp: Float? = null) =
     this.drawBackdrop(
         backdrop = backdrop,
-        shape = { RoundedRectangle((radiusDp ?: (8f + settings.corner * 40f)).dp) },
+        shape = { RoundedRectangle(glassRadiusDp(settings, radiusDp).dp) },
         effects = {
             vibrancy()
             blur(settings.blurDp.dp.toPx())

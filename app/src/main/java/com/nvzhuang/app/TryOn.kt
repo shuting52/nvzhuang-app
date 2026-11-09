@@ -681,7 +681,7 @@ fun TryOnSection(title: String, backdrop: Backdrop, content: @Composable () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
