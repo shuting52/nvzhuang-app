@@ -51,6 +51,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.kyant.shapes.RoundedRectangle
 
 /**
  * 软件更新：按钮复刻 crystal-liquid-ui-kit 的 Update 组件——
@@ -357,7 +358,7 @@ fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClos
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            Modifier.fillMaxWidth(0.88f).clip(RoundedCornerShape(16.dp))
+            Modifier.fillMaxWidth(0.88f).clip(RoundedRectangle(16.dp))
                 .glass(backdrop, glass, p.glass, radiusDp = 16f)
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

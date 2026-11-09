@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kyant.backdrop.Backdrop
+import com.kyant.shapes.RoundedRectangle
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -470,7 +471,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
         TryOnSection("1 · 人物照片", backdrop) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(
-                    Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f),
+                    Modifier.size(96.dp).clip(RoundedRectangle(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f),
                     contentAlignment = Alignment.Center,
                 ) {
                     when {
@@ -495,7 +496,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
         TryOnSection("2 · 服装", backdrop) {
             if (garment != null) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f)) {
+                    Box(Modifier.size(96.dp).clip(RoundedRectangle(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f)) {
                         AsyncImage(
                             model = garment.thumb, contentDescription = garment.id,
                             modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
@@ -513,7 +514,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
-                    Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)
+                    Modifier.weight(1f).clip(RoundedRectangle(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                 ) {
                     if (garmentQuery.isEmpty()) T("输编号找衣服，如 SPR-0001", 13, p.muted)
@@ -622,7 +623,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(history, key = { it.id }) { record ->
-                    Box(Modifier.aspectRatio(2f / 3f).clip(RoundedCornerShape(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)) {
+                    Box(Modifier.aspectRatio(2f / 3f).clip(RoundedRectangle(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)) {
                         AsyncImage(
                             model = tryOnFile(context, record), contentDescription = record.garmentId,
                             modifier = Modifier.fillMaxSize().clickable {
@@ -681,7 +682,7 @@ fun TryOnSection(title: String, backdrop: Backdrop, content: @Composable () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -701,7 +702,7 @@ fun ModelPickerDialog(repo: Repo, backdrop: Backdrop, onPick: (Item) -> Unit, on
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            Modifier.fillMaxWidth(0.92f).clip(RoundedCornerShape(16.dp)).glass(backdrop, glass, p.glass, radiusDp = 16f)
+            Modifier.fillMaxWidth(0.92f).clip(RoundedRectangle(16.dp)).glass(backdrop, glass, p.glass, radiusDp = 16f)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -717,7 +718,7 @@ fun ModelPickerDialog(repo: Repo, backdrop: Backdrop, onPick: (Item) -> Unit, on
             ) {
                 items(items, key = { it.id }) { item ->
                     Column(
-                        Modifier.clip(RoundedCornerShape(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)
+                        Modifier.clip(RoundedRectangle(10.dp)).glass(backdrop, glass, p.glass, radiusDp = 10f)
                             .clickable { onPick(item) },
                     ) {
                         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f)) {

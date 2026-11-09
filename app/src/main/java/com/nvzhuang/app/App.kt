@@ -8,8 +8,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,25 +35,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -69,12 +65,12 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.kyant.backdrop.catalog.components.LiquidBottomTabs
+import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -99,7 +95,7 @@ fun Chip(text: String, selected: Boolean, backdrop: Backdrop, onClick: () -> Uni
     val glass = LocalGlassSettings.current
     Box(
         Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedRectangle(20.dp))
             .then(
                 if (selected) Modifier.background(BrandGradient)
                 else Modifier.glass(backdrop, glass, p.glass, radiusDp = 20f),
@@ -118,7 +114,7 @@ fun ActionButton(text: String, primary: Boolean, onClick: () -> Unit, modifier: 
     val glass = LocalGlassSettings.current
     Box(
         modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedRectangle(12.dp))
             .then(
                 when {
                     primary -> Modifier.background(BrandGradient)
@@ -134,50 +130,98 @@ fun ActionButton(text: String, primary: Boolean, onClick: () -> Unit, modifier: 
     }
 }
 
-// 原生日夜开关（Ludion toggle-daylight 的原生近似版：WebGL 像素场景进不了 APK）：
-// 药丸 + 滑动的太阳/月亮 + 夜晚星星，点一下切换深浅主题。
+// 原生昼夜场景开关（Ludion toggle-daylight 的原生版：WebGL 像素场景进不了 APK）：
+// 天空 + 太阳/月亮滑动 + 星星 + 远近山丘 + 小树，点一下切换深浅主题。
 @Composable
 fun DaylightToggle(dark: Boolean, onToggle: () -> Unit) {
-    val frac by animateFloatAsState(if (dark) 1f else 0f, tween(220), label = "daylight")
-    val sky = if (dark) Color(0xFF1B2146) else Color(0xFFF0E7D4)
-    val ring = if (dark) Color(0xFF2A3259) else Color(0xFFD6CDBA)
+    val frac by animateFloatAsState(if (dark) 1f else 0f, tween(400), label = "daylight")
     Canvas(
-        Modifier.width(64.dp).height(32.dp)
-            .clip(RoundedCornerShape(50))
+        Modifier.width(96.dp).height(56.dp)
+            .clip(RoundedRectangle(28.dp))
             .clickable { onToggle() },
     ) {
         val w = size.width
         val h = size.height
-        drawRoundRect(sky, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2))
-        drawRoundRect(ring, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2), style = Stroke(1.dp.toPx()))
-        if (dark) {
-            val stars = listOf(0.20f to 0.30f, 0.36f to 0.65f, 0.66f to 0.28f, 0.80f to 0.62f)
+        // 天空：昼暖纸 → 夜藏青
+        drawRect(
+            Brush.verticalGradient(
+                listOf(
+                    lerp(Color(0xFFF5ECD9), Color(0xFF1B2146), frac),
+                    lerp(Color(0xFFCFE8F5), Color(0xFF080A2D), frac),
+                ),
+            ),
+        )
+        // 星星（夜）：十字像素星
+        if (frac > 0.02f) {
+            val stars = listOf(
+                0.12f to 0.20f, 0.30f to 0.12f, 0.45f to 0.28f,
+                0.62f to 0.14f, 0.78f to 0.30f, 0.88f to 0.16f, 0.55f to 0.38f,
+            )
             for ((fx, fy) in stars) {
-                drawCircle(Color.White.copy(alpha = 0.85f), 1.6.dp.toPx(), Offset(fx * w, fy * h))
+                val s = 2.dp.toPx()
+                val cx = fx * w
+                val cy = fy * h
+                val a = Color.White.copy(alpha = 0.9f * frac)
+                drawRect(a, Offset(cx - s, cy - s / 3), Size(2 * s, s * 2 / 3))
+                drawRect(a, Offset(cx - s / 3, cy - s), Size(s * 2 / 3, 2 * s))
             }
         }
-        // 滑块：左 = 太阳（昼），右 = 月亮（夜）
-        val r = 11.dp.toPx()
-        val cx = 4.dp.toPx() + r + frac * (w - 8.dp.toPx() - 2 * r)
-        val cy = h / 2
-        if (dark) {
-            drawCircle(Color(0xFFF0E7D4), r, Offset(cx, cy))
-            drawCircle(Color(0xFFD6CDBA), 3.dp.toPx(), Offset(cx + 3.dp.toPx(), cy - 2.dp.toPx()))
-            drawCircle(Color(0xFFD6CDBA), 2.dp.toPx(), Offset(cx - 3.dp.toPx(), cy + 3.dp.toPx()))
-        } else {
+        // 太阳 / 月亮：左昼 → 右夜
+        val r = 9.dp.toPx()
+        val cx = (0.24f + frac * 0.52f) * w
+        val cy = h * 0.38f
+        if (frac < 0.98f) {
+            val rayA = Color(0xFFEFA02C).copy(alpha = 1f - frac)
             for (i in 0 until 8) {
-                val a = (i * 45f) * (PI / 180f)
-                val dx = cos(a).toFloat() * (r + 2.dp.toPx())
-                val dy = sin(a).toFloat() * (r + 2.dp.toPx())
-                val ex = cos(a).toFloat() * (r + 5.dp.toPx())
-                val ey = sin(a).toFloat() * (r + 5.dp.toPx())
+                val an = (i * 45f) * (PI / 180f)
+                val d1 = r + 2.dp.toPx()
+                val d2 = r + 5.dp.toPx()
                 drawLine(
-                    Color(0xFFEFA02C), Offset(cx + dx, cy + dy), Offset(cx + ex, cy + ey),
+                    rayA,
+                    Offset(cx + cos(an).toFloat() * d1, cy + sin(an).toFloat() * d1),
+                    Offset(cx + cos(an).toFloat() * d2, cy + sin(an).toFloat() * d2),
                     strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
                 )
             }
-            drawCircle(Color(0xFFEFA02C), r, Offset(cx, cy))
         }
+        drawCircle(lerp(Color(0xFFEFA02C), Color(0xFFF0E7D4), frac), r, Offset(cx, cy))
+        if (frac > 0.02f) {
+            val crater = Color(0xFFD6CDBA).copy(alpha = frac)
+            drawCircle(crater, 2.5.dp.toPx(), Offset(cx + 3.dp.toPx(), cy - 2.dp.toPx()))
+            drawCircle(crater, 1.8.dp.toPx(), Offset(cx - 3.dp.toPx(), cy + 2.5.dp.toPx()))
+        }
+        // 远山
+        val hillFarPath = Path().apply {
+            moveTo(0f, h * 0.74f)
+            quadraticBezierTo(w * 0.28f, h * 0.60f, w * 0.55f, h * 0.72f)
+            quadraticBezierTo(w * 0.78f, h * 0.82f, w, h * 0.66f)
+            lineTo(w, h)
+            lineTo(0f, h)
+            close()
+        }
+        drawPath(hillFarPath, lerp(Color(0xFF8C9A62), Color(0xFF2A3259), frac))
+        // 近山
+        val hillNearPath = Path().apply {
+            moveTo(0f, h * 0.86f)
+            quadraticBezierTo(w * 0.30f, h * 0.74f, w * 0.60f, h * 0.86f)
+            quadraticBezierTo(w * 0.82f, h * 0.94f, w, h * 0.82f)
+            lineTo(w, h)
+            lineTo(0f, h)
+            close()
+        }
+        drawPath(hillNearPath, lerp(Color(0xFF637039), Color(0xFF181D42), frac))
+        // 小树（近山上）
+        val treeX = w * 0.72f
+        val treeY = h * 0.84f
+        val treeColor = lerp(Color(0xFF424E16), Color(0xFF2A3259), frac)
+        drawRect(treeColor, Offset(treeX - 1.dp.toPx(), treeY), Size(2.dp.toPx(), 5.dp.toPx()))
+        val foliage = Path().apply {
+            moveTo(treeX, treeY - 8.dp.toPx())
+            lineTo(treeX - 5.dp.toPx(), treeY)
+            lineTo(treeX + 5.dp.toPx(), treeY)
+            close()
+        }
+        drawPath(foliage, treeColor)
     }
 }
 
@@ -358,7 +402,7 @@ fun GalleryTab(
             for (m in Mode.entries) {
                 val total = repo.all(m).size
                 Box(
-                    Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                    Modifier.weight(1f).clip(RoundedRectangle(12.dp))
                         .then(
                             if (mode == m) Modifier.background(BrandGradient)
                             else Modifier.glass(backdrop, glass, p.glass, radiusDp = 12f),
@@ -373,7 +417,7 @@ fun GalleryTab(
         // 搜索框
         Box(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f)
+                .clip(RoundedRectangle(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f)
                 .padding(horizontal = 14.dp, vertical = 11.dp),
         ) {
             if (query.isEmpty()) T("搜 ID 或关键词，如 denim、蕾丝、白…", 14, p.muted)
@@ -443,7 +487,7 @@ fun GalleryCard(item: Item, isFav: Boolean, backdrop: Backdrop, onClick: () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+        Modifier.clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .clickable { onClick() },
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(p.chipBg)) {
@@ -533,10 +577,10 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.3.7 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.3.8 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+            Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -567,100 +611,44 @@ fun GlassSettingsBlock(backdrop: Backdrop, onGlassChange: (GlassSettings) -> Uni
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     var s by remember { mutableStateOf(loadGlassSettings(context)) }
-    // 拖动时只实时预览（不写磁盘），松手再保存，避免每帧写 SharedPreferences
-    fun preview(ns: GlassSettings) {
+    fun update(ns: GlassSettings) {
         s = ns
+        saveGlassSettings(context, ns)
         onGlassChange(ns)
     }
-    fun commit() { saveGlassSettings(context, s) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         T("液态玻璃设置", 15, bold = true)
         T("调卡片的玻璃效果，和 boli 一套（圆角 / 模糊 / 折射高度 / 折射强度 / 色散）。", 13, p.muted)
-        GlassSlider("圆角", s.corner, 0f, 1f, 0.05f, { preview(s.copy(corner = it)) }, { commit() })
-        GlassSlider("模糊", s.blurDp, 0f, 12f, 1f, { preview(s.copy(blurDp = it)) }, { commit() })
-        GlassSlider("折射高度", s.height, 0f, 1f, 0.05f, { preview(s.copy(height = it)) }, { commit() })
-        GlassSlider("折射强度", s.amount, 0f, 1f, 0.05f, { preview(s.copy(amount = it)) }, { commit() })
-        GlassSlider("色散", s.chroma, 0f, 1f, 0.1f, { preview(s.copy(chroma = it)) }, { commit() })
+        GlassStepper("圆角", s.corner, 0f, 1f, 0.05f) { update(s.copy(corner = it)) }
+        GlassStepper("模糊", s.blurDp, 0f, 12f, 1f) { update(s.copy(blurDp = it)) }
+        GlassStepper("折射高度", s.height, 0f, 1f, 0.05f) { update(s.copy(height = it)) }
+        GlassStepper("折射强度", s.amount, 0f, 1f, 0.05f) { update(s.copy(amount = it)) }
+        GlassStepper("色散", s.chroma, 0f, 1f, 0.1f) { update(s.copy(chroma = it)) }
     }
 }
 
-// 液态玻璃设置的拖动进度条：点轨道跳转、横拖连续调，按原步进吸附，松手保存。
-// 不用 material3 Slider（工程没引该依赖，离线编不过），纯 Canvas + 手势手写。
 @Composable
-fun GlassSlider(
-    label: String,
-    value: Float,
-    min: Float,
-    max: Float,
-    step: Float,
-    onChange: (Float) -> Unit,
-    onChangeFinished: () -> Unit,
-) {
+fun GlassStepper(label: String, value: Float, min: Float, max: Float, step: Float, onChange: (Float) -> Unit) {
     val p = LocalPalette.current
-    val latestValue by rememberUpdatedState(value)
-    val latestChange by rememberUpdatedState(onChange)
-    val latestFinished by rememberUpdatedState(onChangeFinished)
-    var widthPx by remember { mutableFloatStateOf(0f) }
-    fun snap(raw: Float): Float {
-        val steps = ((raw - min) / step).roundToInt()
-        return (min + steps * step).coerceIn(min, max)
-    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         T(label, 13, modifier = Modifier.width(76.dp))
-        Canvas(
-            Modifier.weight(1f).height(28.dp)
-                .onSizeChanged { widthPx = it.width.toFloat() }
-                .pointerInput(min, max, step) {
-                    detectTapGestures { offset ->
-                        if (widthPx > 0f) {
-                            latestChange(snap(min + (offset.x / widthPx).coerceIn(0f, 1f) * (max - min)))
-                            latestFinished()
-                        }
-                    }
-                }
-                .pointerInput(min, max, step) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = { latestFinished() },
-                        onDragCancel = { latestFinished() },
-                    ) { change, dragAmount ->
-                        change.consume()
-                        if (widthPx > 0f) {
-                            latestChange(snap(latestValue + dragAmount / widthPx * (max - min)))
-                        }
-                    }
-                },
-        ) {
-            val frac = ((value - min) / (max - min)).coerceIn(0f, 1f)
-            val trackH = 6.dp.toPx()
-            val cy = size.height / 2f
-            val radius = trackH / 2f
-            drawRoundRect(
-                color = p.line,
-                topLeft = Offset(0f, cy - radius),
-                size = Size(size.width, trackH),
-                cornerRadius = CornerRadius(radius, radius),
-            )
-            if (frac > 0f) {
-                drawRoundRect(
-                    brush = BrandGradient,
-                    topLeft = Offset(0f, cy - radius),
-                    size = Size(size.width * frac, trackH),
-                    cornerRadius = CornerRadius(radius, radius),
-                )
-            }
-            val thumbR = 11.dp.toPx()
-            val tx = (frac * size.width).coerceIn(thumbR, size.width - thumbR)
-            drawCircle(Color.Black.copy(alpha = 0.18f), radius = thumbR + 2.dp.toPx(), center = Offset(tx, cy))
-            drawCircle(Color.White, radius = thumbR, center = Offset(tx, cy))
-            drawCircle(p.line, radius = thumbR, center = Offset(tx, cy), style = Stroke(1.dp.toPx()))
-        }
-        Box(Modifier.width(48.dp), contentAlignment = Alignment.CenterEnd) {
+        Box(
+            Modifier.clip(CircleShape).background(p.chipBg)
+                .clickable { onChange((value - step).coerceIn(min, max)) }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+        ) { T("−", 14, bold = true) }
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             T(String.format("%.2f", value), 13)
         }
+        Box(
+            Modifier.clip(CircleShape).background(p.chipBg)
+                .clickable { onChange((value + step).coerceIn(min, max)) }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+        ) { T("+", 14, bold = true) }
     }
 }
 
@@ -677,7 +665,7 @@ fun AiSettingsBlock(backdrop: Backdrop) {
     var status by remember { mutableStateOf("") }
     var testing by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -731,7 +719,7 @@ fun AiField(label: String, value: String, password: Boolean, onChange: (String) 
 fun AboutBlock(title: String, body: String, backdrop: Backdrop, glass: GlassSettings) {
     val p = LocalPalette.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+        Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -804,7 +792,7 @@ fun DetailScreen(
             // 大图
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(14.dp)).glass(detailBackdrop, glass, p.glass, radiusDp = 14f),
+                    .clip(RoundedRectangle(14.dp)).glass(detailBackdrop, glass, p.glass, radiusDp = 14f),
                 contentAlignment = Alignment.Center,
             ) {
                 AsyncImage(
@@ -830,7 +818,7 @@ fun DetailScreen(
                     ) {
                         for (tag in item.displayTags) {
                             Box(
-                                Modifier.clip(RoundedCornerShape(20.dp))
+                                Modifier.clip(RoundedRectangle(20.dp))
                                     .glass(detailBackdrop, glass, p.glass, radiusDp = 20f)
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                             ) { T(tag, 13) }
@@ -866,7 +854,7 @@ fun DetailScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
-                    Modifier.fillMaxWidth(0.88f).clip(RoundedCornerShape(16.dp))
+                    Modifier.fillMaxWidth(0.88f).clip(RoundedRectangle(16.dp))
                         .glass(detailBackdrop, glass, p.glass, radiusDp = 16f)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
