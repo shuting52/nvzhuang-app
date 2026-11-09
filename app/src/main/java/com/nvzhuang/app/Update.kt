@@ -178,19 +178,41 @@ class UpdateDownloader {
     }
 }
 
-/** 调起系统安装器覆盖安装。未给“安装未知应用”权限时先跳系统设置页，回来再点一次。 */
+private const val UPDATE_PREFS = "update_prefs"
+private const val PENDING_INSTALL_PATH = "pending_install_path"
+
+/** 是否已获得“安装未知应用”授权（Android 8 以下不需要这项授权）。 */
+fun canInstallPackages(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+        context.packageManager.canRequestPackageInstalls()
+
+/** 记下已下载、等授权后接着装的 APK 路径（存 SharedPreferences，进程被杀也不丢）。 */
+fun setPendingInstall(context: Context, file: File?) {
+    context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE).edit()
+        .apply {
+            if (file == null) remove(PENDING_INSTALL_PATH)
+            else putString(PENDING_INSTALL_PATH, file.absolutePath)
+        }
+        .apply()
+}
+
+fun getPendingInstall(context: Context): File? =
+    context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+        .getString(PENDING_INSTALL_PATH, null)?.let { File(it) }
+
+/** 调起系统安装器覆盖安装。未给“安装未知应用”权限时先跳系统设置页，回来自动接着装（不用再点一次）。 */
 fun installApk(context: Context, file: File): Boolean {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-        !context.packageManager.canRequestPackageInstalls()
-    ) {
+    if (!canInstallPackages(context)) {
+        setPendingInstall(context, file)
         val settings = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
             data = Uri.parse("package:${context.packageName}")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(settings)
-        Toast.makeText(context, "请先允许“安装未知应用”，回来再点一次更新", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "请先允许“安装未知应用”，只开一次，回来自动接着装", Toast.LENGTH_LONG).show()
         return false
     }
+    setPendingInstall(context, null)
     val uri = FileProvider.getUriForFile(context, "com.nvzhuang.app.fileprovider", file)
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/vnd.android.package-archive")

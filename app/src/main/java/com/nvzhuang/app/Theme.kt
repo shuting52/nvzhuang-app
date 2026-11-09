@@ -22,7 +22,7 @@ import com.kyant.shapes.RoundedRectangle
 /**
  * 主题取自 boli（shuting52/boli，LandezhaoleGlass）：
  * 浅色 #FDFDFD / 深色 #121212（默认深色），品牌绿 #16A34A → 蓝 #0EA5E9 渐变，
- * 绿→蓝→靛对角渐变壁纸 + 彩点 + 网格，液态玻璃卡片，悬浮玻璃胶囊底栏。
+ * 极光壁纸（深底 + 柔和光晕，无网格），液态玻璃卡片，悬浮玻璃胶囊底栏。
  * 玻璃默认值同 boli：圆角 0.5、模糊 4dp、折射高度 0.2、折射强度 0.25、色散 1.0。
  */
 
@@ -86,33 +86,41 @@ fun saveGlassSettings(context: Context, s: GlassSettings) {
         .apply()
 }
 
-/** boli 壁纸：绿→蓝→靛对角渐变 + 14 个彩点 + 白色网格线。 */
+/** 极光壁纸：深底 + 大面积柔和径向光晕，没有网格、没有硬边圆点，给液态玻璃做折射底。
+ *  玻璃要“透”，底就不能是平铺的亮色：深色底 + 柔和光晕，模糊和折射才看得出来。 */
 @Composable
 fun Wallpaper(modifier: Modifier = Modifier) {
+    val dark = LocalPalette.current == DarkPalette
     Canvas(modifier.fillMaxSize()) {
         drawRect(
-            Brush.linearGradient(
-                listOf(Color(0xFF16A34A), Color(0xFF0EA5E9), Color(0xFF6366F1)),
-                Offset.Zero, Offset(size.width, size.height),
+            Brush.verticalGradient(
+                if (dark) listOf(Color(0xFF0B1020), Color(0xFF0C1F2B), Color(0xFF0A1420))
+                else listOf(Color(0xFFE9F1F6), Color(0xFFE4F0EC), Color(0xFFF3ECF7)),
             )
         )
-        val colors = listOf(
-            Color(0xFFFFD60A), Color(0xFFFF375F), Color(0xFF30D158),
-            Color(0xFFFFFFFF), Color(0xFFFF9F0A),
+        // 每团光晕：中心色 → 透明，径向渐变天然柔和
+        val blobs = listOf(
+            Blob(0.18f, 0.16f, Color(0xFF7C5CFF), if (dark) 0.55f else 0.45f, 0.62f),
+            Blob(0.86f, 0.32f, Color(0xFF22D3EE), if (dark) 0.45f else 0.40f, 0.55f),
+            Blob(0.12f, 0.78f, Color(0xFF34D399), if (dark) 0.42f else 0.38f, 0.55f),
+            Blob(0.84f, 0.86f, Color(0xFFFB7185), if (dark) 0.36f else 0.32f, 0.50f),
+            Blob(0.52f, 0.52f, Color(0xFFFBBF24), if (dark) 0.26f else 0.22f, 0.38f),
         )
-        for (i in 0 until 14) {
-            val x = ((i * 137) % 100) / 100f * size.width
-            val y = ((i * 71) % 100) / 100f * size.height
-            drawCircle(colors[i % colors.size].copy(alpha = 0.8f), radius = 30f + (i % 5) * 28f, center = Offset(x, y))
-        }
-        val step = 48.dp.toPx()
-        var gx = 0f
-        while (gx < size.width) {
-            drawLine(Color.White.copy(alpha = 0.25f), Offset(gx, 0f), Offset(gx, size.height), 2f)
-            gx += step
+        for (b in blobs) {
+            val center = Offset(b.x * size.width, b.y * size.height)
+            val radius = b.r * size.maxDimension
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(b.color.copy(alpha = b.alpha), Color.Transparent),
+                    center, radius,
+                ),
+                radius = radius, center = center,
+            )
         }
     }
 }
+
+private data class Blob(val x: Float, val y: Float, val color: Color, val alpha: Float, val r: Float)
 
 /** boli 的玻璃面板写法：vibrancy + blur + lens，圆角/模糊/折射跟玻璃设置走。
  *  surface 用半透明色（如 p.glass）时，壁纸会透过折射进来；用 p.card 则接近实色玻璃。
