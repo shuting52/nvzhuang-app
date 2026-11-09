@@ -276,10 +276,10 @@ fun UpdatePill(
                 }
                 T(
                     when (phase) {
-                        UpdatePhase.IDLE -> "Update"
-                        UpdatePhase.DOWNLOADING -> "Updating"
-                        UpdatePhase.DONE -> "Updated"
-                        UpdatePhase.ERROR -> "Update"
+                        UpdatePhase.IDLE -> "更新"
+                        UpdatePhase.DOWNLOADING -> "更新中"
+                        UpdatePhase.DONE -> "已更新"
+                        UpdatePhase.ERROR -> "更新"
                     },
                     19, p.accent, bold = true,
                 )

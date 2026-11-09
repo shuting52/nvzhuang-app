@@ -472,7 +472,7 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.3.1 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.3.2 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
