@@ -382,7 +382,7 @@ fun GalleryCard(item: Item, isFav: Boolean, backdrop: Backdrop, onClick: () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.card)
+        Modifier.clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
             .clickable { onClick() },
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(p.chipBg)) {
@@ -450,16 +450,6 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ) {
         T("关于这个 App", 18, bold = true)
         AboutBlock(
-            "主题",
-            "界面主题取自 boli（shuting52/boli）：默认深色、绿→蓝渐变壁纸、液态玻璃卡片、悬浮玻璃胶囊底栏。玻璃效果可在下方“液态玻璃设置”里调。",
-            backdrop, glass,
-        )
-        AboutBlock(
-            "来源与协议",
-            "数据来自拍片哥女装 COSTUME-DB-01（MIT 开源协议，完全免费开源，允许商业使用、修改与作品创作，无需署名）。\n原站：paipiange.github.io/nvzhuang\n源码：github.com/paipiange/nvzhuang",
-            backdrop, glass,
-        )
-        AboutBlock(
             "内容说明",
             "全部图像均为 AI 生成的虚构服装，并非真实商品照片。写实/动漫版是“没有人物的纯服装图像”（2:3）；AI 模特库是 AI 生成的虚拟模特脸部与造型参考。\n请勿用于表现真实人物或未成年人的用途。",
             backdrop, glass,
@@ -482,15 +472,14 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.3.0 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.3.1 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.card)
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             T("软件更新", 15, bold = true)
-            T("当前版本 v${currentVersionName(context)}（${currentVersionCode(context)}）。新版本直接覆盖安装，不用卸载；签名 v1+v2+v3 全开，每次都用同一把签名。", 13, p.muted)
             ActionButton(if (checking) "检查中…" else "检查更新", false, {
                 checking = true
                 checkMsg = ""
@@ -523,7 +512,7 @@ fun GlassSettingsBlock(backdrop: Backdrop, onGlassChange: (GlassSettings) -> Uni
         onGlassChange(ns)
     }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.card)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -571,7 +560,7 @@ fun AiSettingsBlock(backdrop: Backdrop) {
     var status by remember { mutableStateOf("") }
     var testing by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.card)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -625,7 +614,7 @@ fun AiField(label: String, value: String, password: Boolean, onChange: (String) 
 fun AboutBlock(title: String, body: String, backdrop: Backdrop, glass: GlassSettings) {
     val p = LocalPalette.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.card)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -761,7 +750,7 @@ fun DetailScreen(
             ) {
                 Column(
                     Modifier.fillMaxWidth(0.88f).clip(RoundedCornerShape(16.dp))
-                        .glass(detailBackdrop, glass, p.card, radiusDp = 16f)
+                        .glass(detailBackdrop, glass, p.glass, radiusDp = 16f)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

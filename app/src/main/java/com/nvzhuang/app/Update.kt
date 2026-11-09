@@ -343,7 +343,7 @@ fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClos
     ) {
         Column(
             Modifier.fillMaxWidth(0.88f).clip(RoundedCornerShape(16.dp))
-                .glass(backdrop, glass, p.card, radiusDp = 16f)
+                .glass(backdrop, glass, p.glass, radiusDp = 16f)
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

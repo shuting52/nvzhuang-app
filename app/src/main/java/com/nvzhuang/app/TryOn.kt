@@ -681,7 +681,7 @@ fun TryOnSection(title: String, backdrop: Backdrop, content: @Composable () -> U
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).glass(backdrop, glass, p.card)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -701,7 +701,7 @@ fun ModelPickerDialog(repo: Repo, backdrop: Backdrop, onPick: (Item) -> Unit, on
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            Modifier.fillMaxWidth(0.92f).clip(RoundedCornerShape(16.dp)).glass(backdrop, glass, p.card, radiusDp = 16f)
+            Modifier.fillMaxWidth(0.92f).clip(RoundedCornerShape(16.dp)).glass(backdrop, glass, p.glass, radiusDp = 16f)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
