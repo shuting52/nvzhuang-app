@@ -7,16 +7,12 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,11 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import java.io.File
@@ -59,9 +53,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * 软件更新：按钮与进度复刻 crystal-liquid-ui-kit 的 Update 组件——
- * 白色胶囊 + 蓝色圆标 ↓，点按变宽、液态进度从左向右灌满（渐变流动 + 前缘淡出），
- * 右侧弹出 × 可随时取消；跑满变 Updated ✓，1.2 秒后自动复位（本 App 是 1.2 秒后自动调起安装）。
+ * 软件更新：按钮复刻 crystal-liquid-ui-kit 的 Update 组件——
+ * 白色胶囊 + 蓝色圆标 ↓，点按变宽，右侧弹出 × 可随时取消；
+ * 跑满变 Updated ✓，1.2 秒后自动调起安装。
+ * 下载进度不用胶囊里的蓝渐变灌满了，改成下面的磁性流体进度条（FerroProgress：
+ * 玻璃管 + 黑流体 + 尖刺，跑满收拢成球），进度由 UpdateDownloader 的真实下载进度驱动。
  * 功能：启动时自动查一次 + 关于页手动查；新版本下载到缓存后直接调起安装器覆盖安装，
  * 不用卸载旧版。覆盖安装的前提是包名相同 + 签名同一把 + versionCode 更大，
  * 本工程签名固定用同一把 keystore，且 v1+v2+v3 三种签名方案全开。
@@ -261,14 +257,13 @@ enum class UpdatePhase { IDLE, DOWNLOADING, DONE, ERROR }
 
 /**
  * 水晶版 Update 胶囊按钮。
- * Idle：152dp 白胶囊，蓝色圆标 ↓ + “Update”；点按 → 变宽到 202dp，
- * 液态进度灌满（蓝渐变流动，前缘淡出），右侧 × 弹出可取消；
- * 跑满 → “Updated” ✓，1.2 秒后复位。
+ * Idle：152dp 白胶囊，蓝色圆标 ↓ + “更新”；点按 → 变宽到 202dp，
+ * 右侧 × 弹出可取消；跑满 → “已更新” ✓，1.2 秒后自动调起安装。
+ * 进度条不在胶囊里，下载中由下面的 FerroProgress 磁性流体管显示。
  */
 @Composable
 fun UpdatePill(
     phase: UpdatePhase,
-    progress: Float,
     onClick: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -276,15 +271,6 @@ fun UpdatePill(
     val downloading = phase == UpdatePhase.DOWNLOADING
     val width by animateDpAsState(if (downloading) 202.dp else 152.dp, label = "updWidth")
     val cancelScale by animateFloatAsState(if (downloading) 1f else 0f, label = "updCancel")
-    // 液态流动：0→1 循环（复刻 kit 里 liquid 1.6s linear infinite 的流动感）
-    val shiftAnim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            shiftAnim.animateTo(1f, tween(1600, easing = LinearEasing))
-            shiftAnim.snapTo(0f)
-        }
-    }
-    val shift = shiftAnim.value
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.width(width).height(54.dp).clip(RoundedCornerShape(999.dp))
@@ -292,34 +278,6 @@ fun UpdatePill(
                 .clickable(enabled = phase == UpdatePhase.IDLE) { onClick() },
             contentAlignment = Alignment.CenterStart,
         ) {
-            // 液态进度
-            if (downloading || phase == UpdatePhase.DONE) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val wPx = with(LocalDensity.current) { maxWidth.toPx() }
-                    val fillW = (maxWidth * if (phase == UpdatePhase.DONE) 1f else progress)
-                    Box(
-                        Modifier.width(fillW).fillMaxSize()
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF8EC1FF), Color(0xFFD3E6FF), Color(0xFF8EC1FF)),
-                                    startX = -wPx + shift * wPx * 2,
-                                    endX = shift * wPx * 2,
-                                ),
-                            ),
-                    )
-                    // 前缘淡出
-                    if (phase != UpdatePhase.DONE) {
-                        Box(
-                            Modifier.offset(x = fillW - 24.dp).width(24.dp).fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(Color(0xFF8EC1FF).copy(alpha = 0.9f), Color.Transparent),
-                                    ),
-                                ),
-                        )
-                    }
-                }
-            }
             Row(
                 Modifier.padding(start = 16.dp, end = 22.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -416,21 +374,25 @@ fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClos
             }
             UpdatePill(
                 phase = phase,
-                progress = progress,
                 onClick = { startDownload() },
                 onCancel = {
                     downloader.cancel()
                     Toast.makeText(context, "已取消更新", Toast.LENGTH_SHORT).show()
                 },
             )
+            // 磁性流体下载进度条：下载中 / 跑满时显示，接真实下载进度
+            if (phase == UpdatePhase.DOWNLOADING || phase == UpdatePhase.DONE) {
+                FerroProgress(
+                    progress = if (phase == UpdatePhase.DONE) 1f else progress,
+                    done = phase == UpdatePhase.DONE,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (phase == UpdatePhase.ERROR && error.isNotEmpty()) {
                 T(error, 13, Color(0xFFE5484D))
             }
             if (phase == UpdatePhase.IDLE || phase == UpdatePhase.ERROR) {
                 ActionButton("稍后再说", false, onClose, Modifier.fillMaxWidth(), backdrop = backdrop)
-            }
-            if (phase == UpdatePhase.DOWNLOADING) {
-                T("正在下载新版本…点 × 可取消", 12, p.muted)
             }
         }
     }

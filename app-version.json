@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.3.4/Shuting-Shiyijian-1.3.4.apk","notes":{"add":[],"optimize":["更新检查与下载加自动重试：网关超时（502/503/504）或网络抖动自动重下 3 次，不用手动再点"],"remove":[]},"versionCode":8,"versionName":"1.3.4"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.3.5/Shuting-Shiyijian-1.3.5.apk","notes":{"add":[],"optimize":["更新下载进度条换成磁性流体效果：玻璃管+黑流体+前缘尖刺，跑满收拢成球，进度接真实下载"],"remove":["更新胶囊里的蓝渐变灌满进度（改由磁性流体管显示）"]},"versionCode":9,"versionName":"1.3.5"}
