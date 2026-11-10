@@ -544,7 +544,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSett
         // 生成
         ActionButton(
             if (generating) "生成中，可能要等 1 分钟…" else "✨ 开始 AI 试穿",
-            true, { generate() }, Modifier.fillMaxWidth(),
+            true, { generate() }, Modifier.fillMaxWidth(), backdrop = backdrop,
         )
         if (error.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -572,7 +572,7 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSett
                         val msg = downloadBytesToGallery(context, bytes, "试穿-$resultLabel")
                         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                     }
-                }, Modifier.weight(1f))
+                }, Modifier.weight(1f), backdrop = backdrop)
                 ActionButton("再生成一次", false, { generate() }, Modifier.weight(1f), backdrop = backdrop)
             }
         }
@@ -670,7 +670,7 @@ fun TryOnSettingsSection(title: String, settings: TryOnSettings, onSettingsChang
             ActionButton("保存设置", true, {
                 saveTryOnSettings(context, settings)
                 Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
-            }, Modifier.weight(1f))
+            }, Modifier.weight(1f), backdrop = backdrop)
             ActionButton("恢复默认", false, {
                 val next = defaultTryOnSettings(settings.provider).copy(apiKey = settings.apiKey)
                 onSettingsChange(next)

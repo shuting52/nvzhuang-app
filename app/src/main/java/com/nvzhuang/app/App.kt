@@ -1,6 +1,9 @@
 package com.nvzhuang.app
 
+import android.net.Uri
+import android.widget.MediaController
 import android.widget.Toast
+import android.widget.VideoView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -10,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,6 +73,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -108,132 +113,77 @@ fun Chip(text: String, selected: Boolean, backdrop: Backdrop, onClick: () -> Uni
     Box(
         Modifier
             .clip(RoundedRectangle(20.dp))
-            .then(
-                if (selected) Modifier.background(BrandGradient)
-                else Modifier.glass(backdrop, glass, p.glass, radiusDp = 20f),
-            )
+            .glass(backdrop, glass, p.glass, radiusDp = 20f)
+            .then(if (selected) Modifier.border(1.dp, p.accent, RoundedRectangle(20.dp)) else Modifier)
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        T(text, 13, if (selected) Color.White else p.text, bold = selected)
+        T(text, 13, if (selected) p.accent else p.text, bold = selected)
     }
 }
 
 @Composable
-fun ActionButton(text: String, primary: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, backdrop: Backdrop? = null) {
+fun ActionButton(text: String, primary: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, backdrop: Backdrop) {
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     Box(
         modifier
             .clip(RoundedRectangle(12.dp))
-            .then(
-                when {
-                    primary -> Modifier.background(BrandGradient)
-                    backdrop != null -> Modifier.glass(backdrop, glass, p.glass, radiusDp = 12f)
-                    else -> Modifier.background(p.chipBg)
-                },
-            )
+            .glass(backdrop, glass, p.glass, radiusDp = 12f)
+            .then(if (primary) Modifier.border(1.dp, p.accent, RoundedRectangle(12.dp)) else Modifier)
             .clickable { onClick() }
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        T(text, 14, if (primary) Color.White else p.text, bold = primary)
+        T(text, 14, if (primary) p.accent else p.text, bold = primary)
     }
 }
 
-// 原生昼夜场景开关（Ludion toggle-daylight 的原生版：WebGL 像素场景进不了 APK）：
-// 天空 + 太阳/月亮滑动 + 星星 + 远近山丘 + 小树，点一下切换深浅主题。
+// 原生日夜开关（Ludion toggle-daylight 的原生近似版：WebGL 像素场景进不了 APK）：
+// 药丸 + 滑动的太阳/月亮 + 夜晚星星，点一下切换深浅主题。
 @Composable
 fun DaylightToggle(dark: Boolean, onToggle: () -> Unit) {
-    val frac by animateFloatAsState(if (dark) 1f else 0f, tween(400), label = "daylight")
+    val frac by animateFloatAsState(if (dark) 1f else 0f, tween(220), label = "daylight")
+    val sky = if (dark) Color(0xFF1B2146) else Color(0xFFF0E7D4)
+    val ring = if (dark) Color(0xFF2A3259) else Color(0xFFD6CDBA)
     Canvas(
-        Modifier.width(96.dp).height(56.dp)
-            .clip(RoundedRectangle(28.dp))
+        Modifier.width(64.dp).height(32.dp)
+            .clip(RoundedCornerShape(50))
             .clickable { onToggle() },
     ) {
         val w = size.width
         val h = size.height
-        // 天空：昼暖纸 → 夜藏青
-        drawRect(
-            Brush.verticalGradient(
-                listOf(
-                    lerp(Color(0xFFF5ECD9), Color(0xFF1B2146), frac),
-                    lerp(Color(0xFFCFE8F5), Color(0xFF080A2D), frac),
-                ),
-            ),
-        )
-        // 星星（夜）：十字像素星
-        if (frac > 0.02f) {
-            val stars = listOf(
-                0.12f to 0.20f, 0.30f to 0.12f, 0.45f to 0.28f,
-                0.62f to 0.14f, 0.78f to 0.30f, 0.88f to 0.16f, 0.55f to 0.38f,
-            )
+        drawRoundRect(sky, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2))
+        drawRoundRect(ring, Offset.Zero, Size(w, h), CornerRadius(h / 2, h / 2), style = Stroke(1.dp.toPx()))
+        if (dark) {
+            val stars = listOf(0.20f to 0.30f, 0.36f to 0.65f, 0.66f to 0.28f, 0.80f to 0.62f)
             for ((fx, fy) in stars) {
-                val s = 2.dp.toPx()
-                val cx = fx * w
-                val cy = fy * h
-                val a = Color.White.copy(alpha = 0.9f * frac)
-                drawRect(a, Offset(cx - s, cy - s / 3), Size(2 * s, s * 2 / 3))
-                drawRect(a, Offset(cx - s / 3, cy - s), Size(s * 2 / 3, 2 * s))
+                drawCircle(Color.White.copy(alpha = 0.85f), 1.6.dp.toPx(), Offset(fx * w, fy * h))
             }
         }
-        // 太阳 / 月亮：左昼 → 右夜
-        val r = 9.dp.toPx()
-        val cx = (0.24f + frac * 0.52f) * w
-        val cy = h * 0.38f
-        if (frac < 0.98f) {
-            val rayA = Color(0xFFEFA02C).copy(alpha = 1f - frac)
+        // 滑块：左 = 太阳（昼），右 = 月亮（夜）
+        val r = 11.dp.toPx()
+        val cx = 4.dp.toPx() + r + frac * (w - 8.dp.toPx() - 2 * r)
+        val cy = h / 2
+        if (dark) {
+            drawCircle(Color(0xFFF0E7D4), r, Offset(cx, cy))
+            drawCircle(Color(0xFFD6CDBA), 3.dp.toPx(), Offset(cx + 3.dp.toPx(), cy - 2.dp.toPx()))
+            drawCircle(Color(0xFFD6CDBA), 2.dp.toPx(), Offset(cx - 3.dp.toPx(), cy + 3.dp.toPx()))
+        } else {
             for (i in 0 until 8) {
-                val an = (i * 45f) * (PI / 180f)
-                val d1 = r + 2.dp.toPx()
-                val d2 = r + 5.dp.toPx()
+                val a = (i * 45f) * (PI / 180f)
+                val dx = cos(a).toFloat() * (r + 2.dp.toPx())
+                val dy = sin(a).toFloat() * (r + 2.dp.toPx())
+                val ex = cos(a).toFloat() * (r + 5.dp.toPx())
+                val ey = sin(a).toFloat() * (r + 5.dp.toPx())
                 drawLine(
-                    rayA,
-                    Offset(cx + cos(an).toFloat() * d1, cy + sin(an).toFloat() * d1),
-                    Offset(cx + cos(an).toFloat() * d2, cy + sin(an).toFloat() * d2),
+                    Color(0xFFEFA02C), Offset(cx + dx, cy + dy), Offset(cx + ex, cy + ey),
                     strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
                 )
             }
+            drawCircle(Color(0xFFEFA02C), r, Offset(cx, cy))
         }
-        drawCircle(lerp(Color(0xFFEFA02C), Color(0xFFF0E7D4), frac), r, Offset(cx, cy))
-        if (frac > 0.02f) {
-            val crater = Color(0xFFD6CDBA).copy(alpha = frac)
-            drawCircle(crater, 2.5.dp.toPx(), Offset(cx + 3.dp.toPx(), cy - 2.dp.toPx()))
-            drawCircle(crater, 1.8.dp.toPx(), Offset(cx - 3.dp.toPx(), cy + 2.5.dp.toPx()))
-        }
-        // 远山
-        val hillFarPath = Path().apply {
-            moveTo(0f, h * 0.74f)
-            quadraticBezierTo(w * 0.28f, h * 0.60f, w * 0.55f, h * 0.72f)
-            quadraticBezierTo(w * 0.78f, h * 0.82f, w, h * 0.66f)
-            lineTo(w, h)
-            lineTo(0f, h)
-            close()
-        }
-        drawPath(hillFarPath, lerp(Color(0xFF8C9A62), Color(0xFF2A3259), frac))
-        // 近山
-        val hillNearPath = Path().apply {
-            moveTo(0f, h * 0.86f)
-            quadraticBezierTo(w * 0.30f, h * 0.74f, w * 0.60f, h * 0.86f)
-            quadraticBezierTo(w * 0.82f, h * 0.94f, w, h * 0.82f)
-            lineTo(w, h)
-            lineTo(0f, h)
-            close()
-        }
-        drawPath(hillNearPath, lerp(Color(0xFF637039), Color(0xFF181D42), frac))
-        // 小树（近山上）
-        val treeX = w * 0.72f
-        val treeY = h * 0.84f
-        val treeColor = lerp(Color(0xFF424E16), Color(0xFF2A3259), frac)
-        drawRect(treeColor, Offset(treeX - 1.dp.toPx(), treeY), Size(2.dp.toPx(), 5.dp.toPx()))
-        val foliage = Path().apply {
-            moveTo(treeX, treeY - 8.dp.toPx())
-            lineTo(treeX - 5.dp.toPx(), treeY)
-            lineTo(treeX + 5.dp.toPx(), treeY)
-            close()
-        }
-        drawPath(foliage, treeColor)
     }
 }
 
@@ -341,8 +291,7 @@ fun NvzhuangApp() {
                         )
                         2 -> FavTab(
                             modifier = Modifier.weight(1f),
-                            repo = r, favs = favs, backdrop = backdrop, prompts = prompts,
-                            onOpen = { list, index -> detailList = list; detailIndex = index },
+                            backdrop = backdrop, prompts = prompts,
                         )
                         3 -> AboutTab(
                             Modifier.weight(1f),
@@ -426,14 +375,12 @@ fun GalleryTab(
                 val total = repo.all(m).size
                 Box(
                     Modifier.weight(1f).clip(RoundedRectangle(12.dp))
-                        .then(
-                            if (mode == m) Modifier.background(BrandGradient)
-                            else Modifier.glass(backdrop, glass, p.glass, radiusDp = 12f),
-                        )
+                        .glass(backdrop, glass, p.glass, radiusDp = 12f)
+                        .then(if (mode == m) Modifier.border(1.dp, p.accent, RoundedRectangle(12.dp)) else Modifier)
                         .clickable { onMode(m) }
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center,
-                ) { T("${m.label} $total", 14, if (mode == m) Color.White else p.text, bold = mode == m) }
+                ) { T("${m.label} $total", 14, if (mode == m) p.accent else p.text, bold = mode == m) }
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -536,14 +483,13 @@ fun GalleryCard(item: Item, isFav: Boolean, backdrop: Backdrop, onClick: () -> U
 }
 
 @Composable
-fun FavTab(modifier: Modifier = Modifier, repo: Repo, backdrop: Backdrop, favs: Set<String>, prompts: List<PromptItem>, onOpen: (List<Item>, Int) -> Unit) {
+fun FavTab(modifier: Modifier = Modifier, backdrop: Backdrop, prompts: List<PromptItem>) {
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
-    var sub by remember { mutableIntStateOf(0) } // 0 衣服 1 提示词
     var promptGroup by remember { mutableStateOf("全部") }
     var promptQuery by remember { mutableStateOf("") }
     var expandedId by remember { mutableStateOf<String?>(null) }
-    val list = remember(favs, repo) { favs.mapNotNull { repo.byKey(it) } }
+    var playingVideo by remember { mutableStateOf<PromptItem?>(null) }
     val filteredPrompts = remember(prompts, promptGroup, promptQuery) {
         val q = promptQuery.trim()
         prompts.filter { item ->
@@ -551,42 +497,8 @@ fun FavTab(modifier: Modifier = Modifier, repo: Repo, backdrop: Backdrop, favs: 
                 (q.isEmpty() || item.title.contains(q) || item.prompt.contains(q) || item.tags.any { it.contains(q) })
         }
     }
-    Column(modifier.fillMaxWidth()) {
-        // 子切换：衣服 / 提示词
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for ((i, label) in listOf("衣服（${list.size}）", "提示词（${prompts.size}）").withIndex()) {
-                Box(
-                    Modifier.weight(1f).clip(RoundedRectangle(12.dp))
-                        .then(
-                            if (sub == i) Modifier.background(BrandGradient)
-                            else Modifier.glass(backdrop, glass, p.glass, radiusDp = 12f),
-                        )
-                        .clickable { sub = i }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) { T(label, 14, if (sub == i) Color.White else p.text, bold = sub == i) }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        if (sub == 0) {
-            if (list.isEmpty()) {
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    T("还没有收藏，在图库点开一套，点 ♥ 收藏", 14, p.muted)
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    itemsIndexed(list, key = { _, it -> it.key }) { index, item ->
-                        GalleryCard(item, true, backdrop) { onOpen(list, index) }
-                    }
-                }
-            }
-        } else {
+    Box(modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxSize()) {
             // 提示词库：搜索框
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -626,19 +538,20 @@ fun FavTab(modifier: Modifier = Modifier, repo: Repo, backdrop: Backdrop, favs: 
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(filteredPrompts, key = { it.id }) { item ->
-                        PromptCard(item, expanded = expandedId == item.id, backdrop) {
+                        PromptCard(item, expanded = expandedId == item.id, backdrop, onToggle = {
                             expandedId = if (expandedId == item.id) null else item.id
-                        }
+                        }, onPlay = { playingVideo = it })
                     }
                 }
             }
             T("来源：noahvisualsx.com 提示词库", 12, p.muted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         }
+        playingVideo?.let { VideoPlayerDialog(it, backdrop) { playingVideo = null } }
     }
 }
 
 @Composable
-fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle: () -> Unit) {
+fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle: () -> Unit, onPlay: (PromptItem) -> Unit = {}) {
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     val context = LocalContext.current
@@ -647,11 +560,25 @@ fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle
             .clickable { onToggle() },
     ) {
         if (item.image.isNotEmpty()) {
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(p.chipBg)) {
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(p.chipBg)
+                    .clickable { if (item.video.isNotEmpty()) onPlay(item) },
+            ) {
                 AsyncImage(
                     model = item.image, contentDescription = item.title,
                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
                 )
+                if (item.video.isNotEmpty()) {
+                    // ▶ 播放角标：点封面就播原站示例视频
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier.size(52.dp).clip(CircleShape).background(Color(0xCC000000)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            T("▶", 20, Color.White, bold = true)
+                        }
+                    }
+                }
             }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
@@ -674,6 +601,10 @@ fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle
                 maxLines = if (expanded) Int.MAX_VALUE else 3,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (expanded && item.video.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                ActionButton("▶ 播放视频", false, { onPlay(item) }, Modifier.fillMaxWidth(), backdrop = backdrop)
+            }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T(if (expanded) "收起 ↑" else "展开全文 ↓", 12, p.accent, bold = true)
@@ -683,6 +614,57 @@ fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle
     }
 }
 
+/** AI 视频提示词的示例视频播放（原站 mp4，在线播放；系统 VideoView，不引新依赖）。 */
+@Composable
+fun VideoPlayerDialog(item: PromptItem, backdrop: Backdrop, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val p = LocalPalette.current
+    val glass = LocalGlassSettings.current
+    val ratio = item.ratio
+    // 9:16 竖视频用窄一点的框，不然放不下；横视频用宽框
+    val widthFrac = if (ratio == "9:16" || ratio.isEmpty()) 0.72f else 0.92f
+    val aspect = when (ratio) {
+        "16:9" -> 16f / 9f
+        "4:3" -> 4f / 3f
+        else -> 9f / 16f
+    }
+    Box(
+        Modifier.fillMaxSize().background(Color(0xCC000000)).clickable { onClose() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier.fillMaxWidth(widthFrac).clip(RoundedRectangle(16.dp)).glass(backdrop, glass, p.glass, radiusDp = 16f)
+                .padding(14.dp)
+                // 卡片自己吃掉点击，别透传到遮罩把弹窗关了（不然点视频调进度时会误关）
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { },
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            T(item.title, 15, bold = true)
+            Box(Modifier.fillMaxWidth().aspectRatio(aspect).clip(RoundedRectangle(10.dp)).background(Color.Black)) {
+                AndroidView(
+                    factory = { ctx ->
+                        VideoView(ctx).apply {
+                            setVideoURI(Uri.parse(item.video))
+                            setMediaController(MediaController(ctx).also { it.setAnchorView(this) })
+                            setOnPreparedListener { mp -> mp.isLooping = true; start() }
+                            setOnErrorListener { _, _, _ ->
+                                Toast.makeText(ctx, "视频播不了，换个网络试试", Toast.LENGTH_SHORT).show()
+                                true
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    onRelease = { it.stopPlayback() },
+                )
+            }
+            T("在线播放 · 来源 noahvisualsx.com，点视频可调进度", 12, p.muted)
+            ActionButton("关闭", false, onClose, Modifier.fillMaxWidth(), backdrop = backdrop)
+        }
+    }
+}
 @Composable
 fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGlassChange: (GlassSettings) -> Unit, wallpaperId: String, onWallpaperChange: (String) -> Unit) {
     val context = LocalContext.current
@@ -704,12 +686,12 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnS
             "试穿已上线：上传照片、选一件衣服就能生成。在下面填自己的生图模型 Key（Gemini Nano Banana / 豆包 Seedream / GPT Image 兼容）。需要生图模型，纯文字 Key（如 DeepSeek）做不了；Key 只存手机本地。",
             backdrop, glass,
         )
-        ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
+        ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth(), backdrop = backdrop)
         AiSettingsBlock(backdrop)
         TryOnSettingsSection("AI 试穿模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
         WallpaperSettingsBlock(backdrop, wallpaperId, onWallpaperChange)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.4.4 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.6 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
@@ -912,7 +894,7 @@ fun AiSettingsBlock(backdrop: Backdrop) {
             ActionButton("保存设置", true, {
                 saveAiSettings(context, AiSettings(baseUrl, model, apiKey))
                 Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
-            }, Modifier.weight(1f))
+            }, Modifier.weight(1f), backdrop = backdrop)
             ActionButton(if (testing) "测试中…" else "测试连接", false, {
                 saveAiSettings(context, AiSettings(baseUrl, model, apiKey))
                 testing = true
@@ -1018,12 +1000,10 @@ fun DetailScreen(
                 Spacer(Modifier.width(8.dp))
                 Box(
                     Modifier.clip(CircleShape)
-                        .then(
-                            if (isFav) Modifier.background(Color(0xFFFF6B81))
-                            else Modifier.glass(detailBackdrop, glass, p.glass, radiusDp = 24f),
-                        )
+                        .glass(detailBackdrop, glass, p.glass, radiusDp = 24f)
+                        .then(if (isFav) Modifier.border(1.dp, Color(0xFFFF6B81), CircleShape) else Modifier)
                         .clickable { onToggleFav() }.padding(horizontal = 14.dp, vertical = 8.dp),
-                ) { T(if (isFav) "♥ 已收藏" else "♡ 收藏", 14, if (isFav) Color.White else p.text, bold = isFav) }
+                ) { T(if (isFav) "♥ 已收藏" else "♡ 收藏", 14, if (isFav) Color(0xFFFF6B81) else p.text, bold = isFav) }
             }
             // 大图
             Box(
@@ -1063,7 +1043,7 @@ fun DetailScreen(
                 }
                 T("英文关键词：${item.kw}", 12, p.muted)
                 // 操作
-                ActionButton("⬇ 下载原图", true, onDownload, Modifier.fillMaxWidth())
+                ActionButton("⬇ 下载原图", true, onDownload, Modifier.fillMaxWidth(), backdrop = detailBackdrop)
                 ActionButton("👗 试穿这套", false, { onTryOn(item) }, Modifier.fillMaxWidth(), backdrop = detailBackdrop)
                 ActionButton("✨ AI 写穿搭文案", false, { showAi = true; runAi() }, Modifier.fillMaxWidth(), backdrop = detailBackdrop)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1115,7 +1095,7 @@ fun DetailScreen(
                             if (aiText.isNotEmpty()) {
                                 ActionButton("复制文案", true, {
                                     copyText(context, aiText, "文案已复制")
-                                }, Modifier.weight(1f))
+                                }, Modifier.weight(1f), backdrop = detailBackdrop)
                             }
                             ActionButton("再写一条", false, { runAi() }, Modifier.weight(1f), backdrop = detailBackdrop)
                         }

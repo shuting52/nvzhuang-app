@@ -12,8 +12,8 @@ android {
         applicationId = "com.nvzhuang.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.4.4"
+        versionCode = 20
+        versionName = "1.4.6"
     }
 
     signingConfigs {

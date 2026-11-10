@@ -157,6 +157,8 @@ data class PromptItem(
     val tags: List<String>,
     val prompt: String,
     val image: String,
+    /** AI 视频的原站示例视频地址（mp4，在线播放）；没有视频的条目为空。 */
+    val video: String = "",
 ) {
     /** 列表分类：AI 生图 / AI 视频 / 其他（ChatGPT、Muse、Midjourney、可灵等） */
     val group: String
@@ -186,6 +188,7 @@ fun loadPrompts(context: Context): List<PromptItem> {
                 tags = tags,
                 prompt = o.getString("prompt"),
                 image = o.optString("image", ""),
+                video = o.optString("video", ""),
             )
         )
     }
