@@ -8,6 +8,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,14 +37,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -51,7 +56,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +78,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -235,7 +243,10 @@ fun NvzhuangApp() {
     var dark by remember { mutableStateOf(loadDark(context)) }
     var tab by remember { mutableIntStateOf(0) } // 0 图库 1 试穿 2 收藏 3 关于
     var tryOnGarment by remember { mutableStateOf<Item?>(null) }
-    var glassSettings by remember { mutableStateOf(loadGlassSettings(context)) }
+    var glassSettings by remember {
+        migrateGlassSettings138(context)
+        mutableStateOf(loadGlassSettings(context))
+    }
     var mode by remember { mutableStateOf(Mode.COSTUME) }
     var cat by remember { mutableStateOf("全部") }
     var sec by remember { mutableStateOf("全部") }
@@ -577,7 +588,7 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.3.8 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.0 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
@@ -611,11 +622,12 @@ fun GlassSettingsBlock(backdrop: Backdrop, onGlassChange: (GlassSettings) -> Uni
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
     var s by remember { mutableStateOf(loadGlassSettings(context)) }
-    fun update(ns: GlassSettings) {
+    // 拖动时只实时预览（不写磁盘），松手再保存，避免每帧写 SharedPreferences
+    fun preview(ns: GlassSettings) {
         s = ns
-        saveGlassSettings(context, ns)
         onGlassChange(ns)
     }
+    fun commit() { saveGlassSettings(context, s) }
     Column(
         Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
             .padding(14.dp),
@@ -623,32 +635,92 @@ fun GlassSettingsBlock(backdrop: Backdrop, onGlassChange: (GlassSettings) -> Uni
     ) {
         T("液态玻璃设置", 15, bold = true)
         T("调卡片的玻璃效果，和 boli 一套（圆角 / 模糊 / 折射高度 / 折射强度 / 色散）。", 13, p.muted)
-        GlassStepper("圆角", s.corner, 0f, 1f, 0.05f) { update(s.copy(corner = it)) }
-        GlassStepper("模糊", s.blurDp, 0f, 12f, 1f) { update(s.copy(blurDp = it)) }
-        GlassStepper("折射高度", s.height, 0f, 1f, 0.05f) { update(s.copy(height = it)) }
-        GlassStepper("折射强度", s.amount, 0f, 1f, 0.05f) { update(s.copy(amount = it)) }
-        GlassStepper("色散", s.chroma, 0f, 1f, 0.1f) { update(s.copy(chroma = it)) }
+        GlassSlider("圆角", s.corner, 0f, 1f, 0.05f, { preview(s.copy(corner = it)) }, { commit() })
+        GlassSlider("模糊", s.blurDp, 0f, 12f, 1f, { preview(s.copy(blurDp = it)) }, { commit() })
+        GlassSlider("折射高度", s.height, 0f, 1f, 0.05f, { preview(s.copy(height = it)) }, { commit() })
+        GlassSlider("折射强度", s.amount, 0f, 1f, 0.05f, { preview(s.copy(amount = it)) }, { commit() })
+        GlassSlider("色散", s.chroma, 0f, 1f, 0.1f, { preview(s.copy(chroma = it)) }, { commit() })
     }
 }
 
+// 液态玻璃设置的拖动进度条：点轨道跳转、横拖连续调，按原步进吸附，松手保存。
+// 不用 material3 Slider（工程没引该依赖，离线编不过），纯 Canvas + 手势手写。
+// 1.3.6/1.3.7 的 bug 教训：value 必须用 rememberUpdatedState 包一层再进 pointerInput，
+// 否则 pointerInput(Unit) 只在首次组合运行，onDragStart 取到的是第一次的旧值，第二次拖动会跳回去。
 @Composable
-fun GlassStepper(label: String, value: Float, min: Float, max: Float, step: Float, onChange: (Float) -> Unit) {
+fun GlassSlider(
+    label: String,
+    value: Float,
+    min: Float,
+    max: Float,
+    step: Float,
+    onChange: (Float) -> Unit,
+    onCommit: () -> Unit,
+) {
     val p = LocalPalette.current
+    val valueState = rememberUpdatedState(value)
+    val onChangeState = rememberUpdatedState(onChange)
+    val onCommitState = rememberUpdatedState(onCommit)
+    var trackW by remember { mutableFloatStateOf(0f) }
+    var dragStartValue by remember { mutableFloatStateOf(value) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         T(label, 13, modifier = Modifier.width(76.dp))
         Box(
-            Modifier.clip(CircleShape).background(p.chipBg)
-                .clickable { onChange((value - step).coerceIn(min, max)) }
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-        ) { T("−", 14, bold = true) }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Modifier.weight(1f).height(28.dp)
+                .onSizeChanged { trackW = it.width.toFloat() }
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { pos ->
+                        val w = trackW
+                        if (w > 0f) {
+                            val ratio = (pos.x / w).coerceIn(0f, 1f)
+                            val raw = min + ratio * (max - min)
+                            val snapped = ((raw / step).roundToInt() * step).coerceIn(min, max)
+                            onChangeState.value(snapped)
+                            onCommitState.value()
+                        }
+                    })
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragStartValue = valueState.value },
+                        onDragEnd = { onCommitState.value() },
+                        onDragCancel = { onCommitState.value() },
+                        onHorizontalDrag = { _, dragAmount ->
+                            val w = trackW
+                            if (w > 0f) {
+                                val delta = dragAmount / w * (max - min)
+                                val v = (dragStartValue + delta).coerceIn(min, max)
+                                val snapped = ((v / step).roundToInt() * step).coerceIn(min, max)
+                                onChangeState.value(snapped)
+                            }
+                        },
+                    )
+                },
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val cy = h / 2
+                val trackH = 6.dp.toPx()
+                val ratio = ((value - min) / (max - min)).coerceIn(0f, 1f)
+                val thumbX = ratio * w
+                drawRoundRect(
+                    p.chipBg, Offset(0f, cy - trackH / 2), Size(w, trackH),
+                    CornerRadius(trackH / 2, trackH / 2),
+                )
+                if (thumbX > 0f) {
+                    drawRoundRect(
+                        BrandGradient, Offset(0f, cy - trackH / 2), Size(thumbX, trackH),
+                        CornerRadius(trackH / 2, trackH / 2),
+                    )
+                }
+                drawCircle(Color.White, 10.dp.toPx(), Offset(thumbX, cy))
+                drawCircle(p.chipBg, 10.dp.toPx(), Offset(thumbX, cy), style = Stroke(2.dp.toPx()))
+            }
+        }
+        Box(Modifier.width(52.dp), contentAlignment = Alignment.CenterEnd) {
             T(String.format("%.2f", value), 13)
         }
-        Box(
-            Modifier.clip(CircleShape).background(p.chipBg)
-                .clickable { onChange((value + step).coerceIn(min, max)) }
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-        ) { T("+", 14, bold = true) }
     }
 }
 

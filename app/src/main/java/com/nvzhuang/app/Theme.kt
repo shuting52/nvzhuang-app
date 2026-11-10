@@ -87,6 +87,21 @@ fun saveGlassSettings(context: Context, s: GlassSettings) {
         .apply()
 }
 
+// 一次性修复（v1.3.9）：v1.3.6/v1.3.7 的拖动进度条有旧值残留 bug ——
+// pointerInput(Unit) 只在首次组合时运行，onDragStart 里取到的 value 是第一次的值，
+// 第二次拖动会从旧值起算，数值跳回去，松手还把错值存盘。
+// 如果当前存的正好是那套被带偏的数值（圆角 0.70 / 模糊 0.00 / 折射高度 1.00 / 折射强度 0.55 / 色散 1.00），
+// 恢复成她原来那套（0.20 / 0.00 / 0.85 / 1.00 / 1.00）；她之后自己改过数值就不动。
+fun migrateGlassSettings138(context: Context) {
+    val cur = loadGlassSettings(context)
+    fun near(a: Float, b: Float) = kotlin.math.abs(a - b) < 0.001f
+    if (near(cur.corner, 0.70f) && near(cur.blurDp, 0f) && near(cur.height, 1f)
+        && near(cur.amount, 0.55f) && near(cur.chroma, 1f)
+    ) {
+        saveGlassSettings(context, GlassSettings(corner = 0.20f, blurDp = 0f, height = 0.85f, amount = 1f, chroma = 1f))
+    }
+}
+
 /** 极光壁纸：暖纸底（昼）/ 藏青底（夜）+ 大面积柔和径向光晕，没有网格、没有硬边圆点，给液态玻璃做折射底。
  *  玻璃要“透”，底就不能是平铺的亮色：柔和光晕，模糊和折射才看得出来。 */
 @Composable
