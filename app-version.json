@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.4/Shuting-Shiyijian-1.4.4.apk","notes":{"add":[],"optimize":["更新弹窗的按钮也换成液态玻璃（全 App 统一，琥珀描边与斜扫光带不变）"],"remove":[]},"versionCode":18,"versionName":"1.4.4"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.5/Shuting-Shiyijian-1.4.5.apk","notes":{"add":["AI 视频提示词支持点击看动态视频（原站示例视频，在线播放；点封面或展开后的“播放视频”都能看，点视频可调进度）"],"optimize":["深浅开关恢复成药丸滑动款（太阳/月亮滑块）"],"remove":["提示词版块的衣服分类（只剩提示词）"]},"versionCode":19,"versionName":"1.4.5"}
