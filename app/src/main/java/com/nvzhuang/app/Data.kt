@@ -144,6 +144,54 @@ fun loadRepo(context: Context): Repo {
     return Repo(items, en2zh)
 }
 
+// ---------- 提示词库 ----------
+
+/** 提示词库来源：https://noahvisualsx.com/zh/prompts/（2026-11-10 抓取，177 条）。
+ *  全部写进 assets/prompts.json 做成本地数据，不嵌网站；配图在线加载自原站。 */
+data class PromptItem(
+    val id: String,
+    val title: String,
+    val note: String,
+    val kind: String,
+    val ratio: String,
+    val tags: List<String>,
+    val prompt: String,
+    val image: String,
+) {
+    /** 列表分类：AI 生图 / AI 视频 / 其他（ChatGPT、Muse、Midjourney、可灵等） */
+    val group: String
+        get() = when (kind) {
+            "AI 生图" -> "AI 生图"
+            "AI 视频" -> "AI 视频"
+            else -> "其他"
+        }
+}
+
+fun loadPrompts(context: Context): List<PromptItem> {
+    val text = context.assets.open("prompts.json").bufferedReader().readText()
+    val arr = JSONArray(text)
+    val list = ArrayList<PromptItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val o = arr.getJSONObject(i)
+        val tags = ArrayList<String>()
+        val tagsArr = o.optJSONArray("tags")
+        if (tagsArr != null) for (j in 0 until tagsArr.length()) tags.add(tagsArr.getString(j))
+        list.add(
+            PromptItem(
+                id = o.getString("id"),
+                title = o.getString("title"),
+                note = o.optString("note", ""),
+                kind = o.optString("kind", ""),
+                ratio = o.optString("ratio", ""),
+                tags = tags,
+                prompt = o.getString("prompt"),
+                image = o.optString("image", ""),
+            )
+        )
+    }
+    return list
+}
+
 // ---------- 收藏 ----------
 
 private const val PREFS = "nvzhuang"

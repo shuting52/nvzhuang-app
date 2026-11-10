@@ -39,3 +39,5 @@ JDK 21 + Android SDK（compileSdk 36），离线构建：
 ## 数据来源
 
 COSTUME-DB-01（MIT 开源协议），原站 paipiange.github.io/nvzhuang。
+
+提示词库：noahvisualsx.com/zh/prompts（177 条，写进 assets/prompts.json 做成本地数据，配图在线加载）。

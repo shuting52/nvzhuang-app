@@ -25,9 +25,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +63,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -254,12 +257,14 @@ fun NvzhuangApp() {
     var shuffled by remember { mutableStateOf(false) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var favs by remember { mutableStateOf(loadFavs(context)) }
+    var prompts by remember { mutableStateOf<List<PromptItem>>(emptyList()) }
     var detailList by remember { mutableStateOf<List<Item>>(emptyList()) }
     var detailIndex by remember { mutableIntStateOf(-1) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
         repo = withContext(Dispatchers.IO) { loadRepo(context) }
+        prompts = withContext(Dispatchers.IO) { loadPrompts(context) }
         // 启动时自动查一次更新，有新版就弹更新窗
         fetchUpdateInfo().onSuccess {
             if (it.versionCode > currentVersionCode(context)) updateInfo = it
@@ -331,7 +336,7 @@ fun NvzhuangApp() {
                         )
                         2 -> FavTab(
                             modifier = Modifier.weight(1f),
-                            repo = r, favs = favs, backdrop = backdrop,
+                            repo = r, favs = favs, backdrop = backdrop, prompts = prompts,
                             onOpen = { list, index -> detailList = list; detailIndex = index },
                         )
                         3 -> AboutTab(
@@ -524,26 +529,148 @@ fun GalleryCard(item: Item, isFav: Boolean, backdrop: Backdrop, onClick: () -> U
 }
 
 @Composable
-fun FavTab(modifier: Modifier = Modifier, repo: Repo, backdrop: Backdrop, favs: Set<String>, onOpen: (List<Item>, Int) -> Unit) {
+fun FavTab(modifier: Modifier = Modifier, repo: Repo, backdrop: Backdrop, favs: Set<String>, prompts: List<PromptItem>, onOpen: (List<Item>, Int) -> Unit) {
     val p = LocalPalette.current
+    val glass = LocalGlassSettings.current
+    var sub by remember { mutableIntStateOf(0) } // 0 衣服 1 提示词
+    var promptGroup by remember { mutableStateOf("全部") }
+    var promptQuery by remember { mutableStateOf("") }
+    var expandedId by remember { mutableStateOf<String?>(null) }
     val list = remember(favs, repo) { favs.mapNotNull { repo.byKey(it) } }
+    val filteredPrompts = remember(prompts, promptGroup, promptQuery) {
+        val q = promptQuery.trim()
+        prompts.filter { item ->
+            (promptGroup == "全部" || item.group == promptGroup) &&
+                (q.isEmpty() || item.title.contains(q) || item.prompt.contains(q) || item.tags.any { it.contains(q) })
+        }
+    }
     Column(modifier.fillMaxWidth()) {
-        T("我的收藏（${list.size}）", 16, bold = true, modifier = Modifier.padding(16.dp))
-        if (list.isEmpty()) {
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                T("还没有收藏，在图库点开一套，点 ♥ 收藏", 14, p.muted)
+        // 子切换：衣服 / 提示词
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((i, label) in listOf("衣服（${list.size}）", "提示词（${prompts.size}）").withIndex()) {
+                Box(
+                    Modifier.weight(1f).clip(RoundedRectangle(12.dp))
+                        .then(
+                            if (sub == i) Modifier.background(BrandGradient)
+                            else Modifier.glass(backdrop, glass, p.glass, radiusDp = 12f),
+                        )
+                        .clickable { sub = i }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) { T(label, 14, if (sub == i) Color.White else p.text, bold = sub == i) }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        if (sub == 0) {
+            if (list.isEmpty()) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    T("还没有收藏，在图库点开一套，点 ♥ 收藏", 14, p.muted)
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    itemsIndexed(list, key = { _, it -> it.key }) { index, item ->
+                        GalleryCard(item, true, backdrop) { onOpen(list, index) }
+                    }
+                }
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            // 提示词库：搜索框
+            Box(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    .clip(RoundedRectangle(12.dp)).glass(backdrop, glass, p.glass, radiusDp = 12f)
+                    .padding(horizontal = 14.dp, vertical = 11.dp),
             ) {
-                itemsIndexed(list, key = { _, it -> it.key }) { index, item ->
-                    GalleryCard(item, true, backdrop) { onOpen(list, index) }
+                if (promptQuery.isEmpty()) T("搜标题或提示词，如 街拍、贝雷帽、胶片…", 14, p.muted)
+                BasicTextField(
+                    value = promptQuery, onValueChange = { promptQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = p.text, fontSize = 14.sp),
+                    singleLine = true,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            // 分类
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (g in listOf("全部", "AI 生图", "AI 视频", "其他")) {
+                    Chip(g, promptGroup == g, backdrop) { promptGroup = g }
                 }
+            }
+            Spacer(Modifier.height(10.dp))
+            T("共 ${prompts.size} 条 · 已显示 ${filteredPrompts.size} 条", 13, p.muted, modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(Modifier.height(8.dp))
+            if (filteredPrompts.isEmpty()) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    T("没有找到，换个关键词试试", 14, p.muted)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(filteredPrompts, key = { it.id }) { item ->
+                        PromptCard(item, expanded = expandedId == item.id, backdrop) {
+                            expandedId = if (expandedId == item.id) null else item.id
+                        }
+                    }
+                }
+            }
+            T("来源：noahvisualsx.com 提示词库", 12, p.muted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        }
+    }
+}
+
+@Composable
+fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle: () -> Unit) {
+    val p = LocalPalette.current
+    val glass = LocalGlassSettings.current
+    val context = LocalContext.current
+    Column(
+        Modifier.clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+            .clickable { onToggle() },
+    ) {
+        if (item.image.isNotEmpty()) {
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(p.chipBg)) {
+                AsyncImage(
+                    model = item.image, contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                )
+            }
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+            T(item.title, 14, bold = true)
+            if (item.note.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                T(item.note, 12, p.muted)
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                T(item.kind, 12, p.accent, bold = true)
+                if (item.ratio.isNotEmpty()) T(" · ${item.ratio}", 12, p.muted)
+                if (item.tags.isNotEmpty()) T(" · #" + item.tags.joinToString(" #"), 12, p.muted)
+            }
+            Spacer(Modifier.height(8.dp))
+            BasicText(
+                item.prompt,
+                modifier = Modifier.fillMaxWidth(),
+                style = TextStyle(color = p.text, fontSize = 13.sp),
+                maxLines = if (expanded) Int.MAX_VALUE else 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                T(if (expanded) "收起 ↑" else "展开全文 ↓", 12, p.accent, bold = true)
+                ActionButton("复制提示词", true, { copyText(context, item.prompt, "提示词已复制") }, backdrop = backdrop)
             }
         }
     }
@@ -588,7 +715,7 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.4.0 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.1 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)

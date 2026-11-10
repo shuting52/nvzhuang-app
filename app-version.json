@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.0/Shuting-Shiyijian-1.4.0.apk","notes":{"add":[],"optimize":["液态玻璃设置恢复成进度条拖动（按进度条方式呈现）；这次修了拖动跳回旧值的 bug，第二次拖不再跳回去；启动时仍会把被带偏的那套数值恢复成你原来那套"],"remove":[]},"versionCode":14,"versionName":"1.4.0"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.1/Shuting-Shiyijian-1.4.1.apk","notes":{"add":["收藏版块新增提示词库（177 条 AI 生图/视频提示词，支持分类、搜索、展开、复制）"],"optimize":[],"remove":[]},"versionCode":15,"versionName":"1.4.1"}
