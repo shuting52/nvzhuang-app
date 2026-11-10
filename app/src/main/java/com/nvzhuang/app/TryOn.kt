@@ -386,7 +386,7 @@ fun findGarmentById(repo: Repo, id: String): Item? {
 // ---------- 试穿 Tab 界面 ----------
 
 @Composable
-fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGarmentChange: (Item?) -> Unit, modifier: Modifier = Modifier) {
+fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSettings, onGarmentChange: (Item?) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val p = LocalPalette.current
@@ -539,10 +539,6 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSett
                 }, Modifier.width(64.dp), backdrop = backdrop)
             }
         }
-        Spacer(Modifier.height(12.dp))
-
-        // 模型设置（与关于页共用同一份设置）
-        TryOnSettingsSection("3 · 模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
         Spacer(Modifier.height(12.dp))
 
         // 生成

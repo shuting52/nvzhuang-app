@@ -77,6 +77,7 @@ import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.kyant.backdrop.catalog.components.LiquidBottomTabs
 import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
@@ -258,6 +259,7 @@ fun NvzhuangApp() {
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var favs by remember { mutableStateOf(loadFavs(context)) }
     var tryOnSettings by remember { mutableStateOf(loadTryOnSettings(context)) }
+    var wallpaperId by remember { mutableStateOf(loadWallpaperId(context)) }
     var prompts by remember { mutableStateOf<List<PromptItem>>(emptyList()) }
     var detailList by remember { mutableStateOf<List<Item>>(emptyList()) }
     var detailIndex by remember { mutableIntStateOf(-1) }
@@ -276,6 +278,7 @@ fun NvzhuangApp() {
     androidx.compose.runtime.CompositionLocalProvider(
         LocalPalette provides p,
         LocalGlassSettings provides glassSettings,
+        LocalWallpaperStyle provides wallpaperStyleById(wallpaperId),
     ) {
         val backdrop = rememberLayerBackdrop()
         Box(Modifier.fillMaxSize().background(p.bg)) {
@@ -332,7 +335,7 @@ fun NvzhuangApp() {
                         )
                         1 -> TryOnTab(
                             repo = r, garment = tryOnGarment, backdrop = backdrop,
-                            settings = tryOnSettings, onSettingsChange = { tryOnSettings = it },
+                            settings = tryOnSettings,
                             onGarmentChange = { tryOnGarment = it },
                             modifier = Modifier.weight(1f),
                         )
@@ -346,6 +349,7 @@ fun NvzhuangApp() {
                             backdrop = backdrop,
                             settings = tryOnSettings, onSettingsChange = { tryOnSettings = it },
                             onGlassChange = { glassSettings = it; saveGlassSettings(context, it) },
+                            wallpaperId = wallpaperId, onWallpaperChange = { wallpaperId = it; saveWallpaperId(context, it) },
                         )
                     }
                     Spacer(Modifier.height(96.dp))
@@ -680,7 +684,7 @@ fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle
 }
 
 @Composable
-fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGlassChange: (GlassSettings) -> Unit) {
+fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGlassChange: (GlassSettings) -> Unit, wallpaperId: String, onWallpaperChange: (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val p = LocalPalette.current
@@ -696,30 +700,16 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnS
         ) {
         T("关于这个 App", 18, bold = true)
         AboutBlock(
-            "内容说明",
-            "全部图像均为 AI 生成的虚构服装，并非真实商品照片。写实/动漫版是“没有人物的纯服装图像”（2:3）；AI 模特库是 AI 生成的虚拟模特脸部与造型参考。\n请勿用于表现真实人物或未成年人的用途。",
-            backdrop, glass,
-        )
-        AboutBlock(
-            "图库规模",
-            "写实服装 1,407 套（春 215 / 夏 254 / 秋 244 / 冬 253 / 内衣 199 / 派对 48 / 泳装 54 / 性感 140）\n动漫服装 1,320 套\nAI 模特 1,499 位（脸部特写 893 / 整体造型 606）\n图片在线加载自原站，不占手机空间；没网时看不了图。",
-            backdrop, glass,
-        )
-        AboutBlock(
-            "下载说明",
-            "实测发现：原站写实版“原尺寸 PNG”链接目前全部 404（打不开），所以本 App 写实版下载的是可用的高清 webp 原图；动漫版、AI 模特下载的是外站原尺寸 PNG。下载的图片保存在相册 Pictures/淑婷试衣间。",
-            backdrop, glass,
-        )
-        AboutBlock(
             "AI 试穿",
-            "试穿已上线：底部“AI 试穿”Tab 里填自己的生图模型 Key（Gemini Nano Banana / 豆包 Seedream / GPT Image 兼容），上传照片、选一件衣服就能生成。需要生图模型，纯文字 Key（如 DeepSeek）做不了；Key 只存手机本地。",
+            "试穿已上线：上传照片、选一件衣服就能生成。在下面填自己的生图模型 Key（Gemini Nano Banana / 豆包 Seedream / GPT Image 兼容）。需要生图模型，纯文字 Key（如 DeepSeek）做不了；Key 只存手机本地。",
             backdrop, glass,
         )
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
         TryOnSettingsSection("AI 试穿模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
+        WallpaperSettingsBlock(backdrop, wallpaperId, onWallpaperChange)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.4.2 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.3 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
@@ -744,6 +734,47 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnS
         Spacer(Modifier.height(96.dp))
         }
         manualUpdate?.let { UpdateDialog(it, backdrop) { manualUpdate = null } }
+    }
+}
+
+@Composable
+fun WallpaperSettingsBlock(backdrop: Backdrop, wallpaperId: String, onWallpaperChange: (String) -> Unit) {
+    val p = LocalPalette.current
+    val glass = LocalGlassSettings.current
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        T("背景", 15, bold = true)
+        T("给液态玻璃换个底：全是柔和光晕，没有硬边和亮色块，玻璃折射才看得出来。点一下立即换，全 App 都生效。", 13, p.muted)
+        for (row in WALLPAPER_STYLES.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (style in row) {
+                    val selected = style.id == wallpaperId
+                    Column(
+                        Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth().aspectRatio(1.5f)
+                                .clip(RoundedRectangle(10.dp))
+                                .border(
+                                    if (selected) 2.dp else 1.dp,
+                                    if (selected) p.accent else p.muted.copy(alpha = 0.4f),
+                                    RoundedRectangle(10.dp),
+                                )
+                                .clickable { onWallpaperChange(style.id) },
+                        ) {
+                            WallpaperPreview(style, Modifier.fillMaxSize())
+                        }
+                        T(if (selected) "✓ ${style.name}" else style.name, 12, if (selected) p.accent else p.muted)
+                    }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }
 
@@ -944,16 +975,18 @@ fun DetailScreen(
     var aiText by remember { mutableStateOf("") }
     var aiLoading by remember { mutableStateOf(false) }
     var aiError by remember { mutableStateOf("") }
+    var aiJob by remember { mutableStateOf<Job?>(null) }
     fun runAi() {
         if (loadAiSettings(context).apiKey.isBlank()) {
             Toast.makeText(context, "先在 关于 → AI 文案设置 里填 API Key", Toast.LENGTH_LONG).show()
             onNeedKey()
             return
         }
+        aiJob?.cancel()
         aiLoading = true
         aiError = ""
         aiText = ""
-        scope.launch {
+        aiJob = scope.launch {
             val result = generateCopy(context, item)
             aiLoading = false
             result.onSuccess { aiText = it }.onFailure { aiError = it.message ?: "生成失败" }
@@ -1065,19 +1098,27 @@ fun DetailScreen(
                     T("AI 穿搭文案 · ${item.id}", 16, bold = true)
                     Box(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                         when {
-                            aiLoading -> T("正在写文案…", 14, p.muted)
+                            aiLoading -> T("正在写文案…\n一般十几秒，超过 75 秒会自动停并告诉你原因。", 14, p.muted)
                             aiError.isNotEmpty() -> T(aiError, 13, Color(0xFFE5484D))
                             aiText.isNotEmpty() -> T(aiText, 14)
                             else -> T("", 14)
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (aiText.isNotEmpty()) {
-                            ActionButton("复制文案", true, {
-                                copyText(context, aiText, "文案已复制")
-                            }, Modifier.weight(1f))
+                        if (aiLoading) {
+                            ActionButton("取消", false, {
+                                aiJob?.cancel()
+                                aiJob = null
+                                aiLoading = false
+                            }, Modifier.weight(1f), backdrop = detailBackdrop)
+                        } else {
+                            if (aiText.isNotEmpty()) {
+                                ActionButton("复制文案", true, {
+                                    copyText(context, aiText, "文案已复制")
+                                }, Modifier.weight(1f))
+                            }
+                            ActionButton("再写一条", false, { runAi() }, Modifier.weight(1f), backdrop = detailBackdrop)
                         }
-                        ActionButton("再写一条", false, { runAi() }, Modifier.weight(1f), backdrop = detailBackdrop)
                         ActionButton("关闭", false, { showAi = false }, Modifier.weight(1f), backdrop = detailBackdrop)
                     }
                 }

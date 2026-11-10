@@ -2,7 +2,9 @@ package com.nvzhuang.app
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -97,7 +99,9 @@ private suspend fun chatCompletion(settings: AiSettings, system: String, user: S
         content
     }
 
-/** 为一件衣服/模特写穿搭文案。未填 Key 时直接失败，调用方提示去设置里填。 */
+/** 为一件衣服/模特写穿搭文案。未填 Key 时直接失败，调用方提示去设置里填。
+ * 75 秒硬超时：HttpURLConnection 的超时管不到 DNS 解析，接口慢或解析卡住时
+ * 弹窗会一直“正在写文案…”没反应；withTimeout 保证 75 秒内一定有结果。 */
 suspend fun generateCopy(context: Context, item: Item): Result<String> {
     val settings = loadAiSettings(context)
     if (settings.apiKey.isBlank()) {
@@ -105,26 +109,33 @@ suspend fun generateCopy(context: Context, item: Item): Result<String> {
     }
     return try {
         val (system, user) = buildCopyPrompt(item)
-        Result.success(chatCompletion(settings, system, user, 800))
+        val text = withTimeout(75_000) { chatCompletion(settings, system, user, 800) }
+        Result.success(text)
+    } catch (e: TimeoutCancellationException) {
+        Result.failure(Exception("写文案超时（75 秒没回音）：接口太慢或网络不通，换个网络或稍后再试"))
     } catch (e: Exception) {
         Result.failure(e)
     }
 }
 
-/** 测试连接：只发一句“你好”，看接口通不通、Key 对不对。 */
+/** 测试连接：只发一句“你好”，看接口通不通、Key 对不对。同样 75 秒硬超时。 */
 suspend fun testAiConnection(context: Context): Result<String> {
     val settings = loadAiSettings(context)
     if (settings.apiKey.isBlank()) {
         return Result.failure(Exception("NO_KEY"))
     }
     return try {
-        val reply = chatCompletion(
-            settings,
-            "你是一个助手，只回答“连接成功”四个字。",
-            "你好",
-            50,
-        )
+        val reply = withTimeout(75_000) {
+            chatCompletion(
+                settings,
+                "你是一个助手，只回答“连接成功”四个字。",
+                "你好",
+                50,
+            )
+        }
         Result.success(reply)
+    } catch (e: TimeoutCancellationException) {
+        Result.failure(Exception("连接超时（75 秒没回音）：接口太慢或网络不通，换个网络或稍后再试"))
     } catch (e: Exception) {
         Result.failure(e)
     }

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -102,41 +103,124 @@ fun migrateGlassSettings138(context: Context) {
     }
 }
 
-/** 极光壁纸：暖纸底（昼）/ 藏青底（夜）+ 大面积柔和径向光晕，没有网格、没有硬边圆点，给液态玻璃做折射底。
- *  玻璃要“透”，底就不能是平铺的亮色：柔和光晕，模糊和折射才看得出来。 */
-@Composable
-fun Wallpaper(modifier: Modifier = Modifier) {
-    val dark = LocalPalette.current == DarkPalette
-    Canvas(modifier.fillMaxSize()) {
-        drawRect(
-            Brush.verticalGradient(
-                if (dark) listOf(Color(0xFF080A2D), Color(0xFF0C1238), Color(0xFF080A2D))
-                else listOf(Color(0xFFF5ECD9), Color(0xFFF0E7D4), Color(0xFFFFFAEE)),
-            )
+/** 背景款式：每款都是“柔和底色 + 大面积径向光晕”，没有网格、没有硬边圆点，
+ *  玻璃要“透”，底就不能是平铺的亮色：柔和光晕，模糊和折射才看得出来。
+ *  每款分昼夜两套底色与光晕强度，跟着深浅主题走。 */
+data class WallpaperStyle(
+    val id: String, val name: String,
+    val lightBase: List<Color>, val darkBase: List<Color>,
+    val blobs: List<Blob>,
+)
+
+data class Blob(
+    val x: Float, val y: Float, val color: Color,
+    val lightAlpha: Float, val darkAlpha: Float, val r: Float,
+)
+
+val WALLPAPER_STYLES = listOf(
+    WallpaperStyle(
+        "aurora", "极光",
+        lightBase = listOf(Color(0xFFF5ECD9), Color(0xFFF0E7D4), Color(0xFFFFFAEE)),
+        darkBase = listOf(Color(0xFF080A2D), Color(0xFF0C1238), Color(0xFF080A2D)),
+        blobs = listOf(
+            Blob(0.18f, 0.16f, Color(0xFF7C5CFF), 0.45f, 0.55f, 0.62f),
+            Blob(0.86f, 0.32f, Color(0xFF22D3EE), 0.40f, 0.45f, 0.55f),
+            Blob(0.12f, 0.78f, Color(0xFF34D399), 0.38f, 0.42f, 0.55f),
+            Blob(0.84f, 0.86f, Color(0xFFFB7185), 0.32f, 0.36f, 0.50f),
+            Blob(0.52f, 0.52f, Color(0xFFFBBF24), 0.22f, 0.26f, 0.38f),
+        ),
+    ),
+    WallpaperStyle(
+        "warm", "暖阳",
+        lightBase = listOf(Color(0xFFFFF3E0), Color(0xFFFFE8C7), Color(0xFFFFF9F0)),
+        darkBase = listOf(Color(0xFF2D1A08), Color(0xFF3A2208), Color(0xFF1F1406)),
+        blobs = listOf(
+            Blob(0.82f, 0.14f, Color(0xFFF59E0B), 0.42f, 0.50f, 0.60f),
+            Blob(0.16f, 0.30f, Color(0xFFFB923C), 0.38f, 0.45f, 0.55f),
+            Blob(0.86f, 0.82f, Color(0xFFFB7185), 0.32f, 0.38f, 0.52f),
+            Blob(0.14f, 0.84f, Color(0xFFFBBF24), 0.30f, 0.36f, 0.50f),
+            Blob(0.50f, 0.55f, Color(0xFFF87171), 0.20f, 0.24f, 0.38f),
+        ),
+    ),
+    WallpaperStyle(
+        "mint", "薄荷",
+        lightBase = listOf(Color(0xFFE6F7F0), Color(0xFFD6F0E8), Color(0xFFF2FBF7)),
+        darkBase = listOf(Color(0xFF06231C), Color(0xFF0A2E25), Color(0xFF04170F)),
+        blobs = listOf(
+            Blob(0.20f, 0.18f, Color(0xFF2DD4BF), 0.42f, 0.50f, 0.60f),
+            Blob(0.84f, 0.30f, Color(0xFF22D3EE), 0.38f, 0.44f, 0.55f),
+            Blob(0.12f, 0.80f, Color(0xFF34D399), 0.38f, 0.42f, 0.55f),
+            Blob(0.86f, 0.86f, Color(0xFFA3E635), 0.28f, 0.32f, 0.48f),
+            Blob(0.52f, 0.50f, Color(0xFF38BDF8), 0.20f, 0.24f, 0.38f),
+        ),
+    ),
+    WallpaperStyle(
+        "dusk", "粉霞",
+        lightBase = listOf(Color(0xFFFDEEF3), Color(0xFFFADCE8), Color(0xFFFFF6F9)),
+        darkBase = listOf(Color(0xFF2B0A1E), Color(0xFF3A0F28), Color(0xFF1E0716)),
+        blobs = listOf(
+            Blob(0.84f, 0.16f, Color(0xFFF472B6), 0.42f, 0.50f, 0.60f),
+            Blob(0.16f, 0.32f, Color(0xFFA78BFA), 0.38f, 0.45f, 0.55f),
+            Blob(0.12f, 0.80f, Color(0xFFFB7185), 0.36f, 0.40f, 0.52f),
+            Blob(0.86f, 0.84f, Color(0xFFFDBA74), 0.28f, 0.34f, 0.50f),
+            Blob(0.50f, 0.54f, Color(0xFFE879F9), 0.20f, 0.24f, 0.38f),
+        ),
+    ),
+    WallpaperStyle(
+        "night", "星夜",
+        lightBase = listOf(Color(0xFFE8EDF7), Color(0xFFDCE4F2), Color(0xFFF4F7FE)),
+        darkBase = listOf(Color(0xFF050818), Color(0xFF0A1030), Color(0xFF03040A)),
+        blobs = listOf(
+            Blob(0.18f, 0.16f, Color(0xFF6366F1), 0.40f, 0.52f, 0.62f),
+            Blob(0.86f, 0.30f, Color(0xFF3B82F6), 0.36f, 0.44f, 0.55f),
+            Blob(0.12f, 0.78f, Color(0xFF8B5CF6), 0.34f, 0.40f, 0.55f),
+            Blob(0.84f, 0.86f, Color(0xFF22D3EE), 0.28f, 0.34f, 0.50f),
+            Blob(0.52f, 0.52f, Color(0xFFC4B5FD), 0.22f, 0.26f, 0.38f),
+        ),
+    ),
+)
+
+fun wallpaperStyleById(id: String): WallpaperStyle =
+    WALLPAPER_STYLES.firstOrNull { it.id == id } ?: WALLPAPER_STYLES[0]
+
+val LocalWallpaperStyle = compositionLocalOf { WALLPAPER_STYLES[0] }
+
+fun loadWallpaperId(context: Context): String =
+    context.getSharedPreferences(THEME_PREFS, Context.MODE_PRIVATE).getString("wallpaper", "aurora") ?: "aurora"
+
+fun saveWallpaperId(context: Context, id: String) {
+    context.getSharedPreferences(THEME_PREFS, Context.MODE_PRIVATE).edit().putString("wallpaper", id).apply()
+}
+
+/** 画一款背景：竖向底色渐变 + 每团光晕中心色 → 透明，径向渐变天然柔和。 */
+private fun DrawScope.drawWallpaper(style: WallpaperStyle, dark: Boolean) {
+    drawRect(Brush.verticalGradient(if (dark) style.darkBase else style.lightBase))
+    for (b in style.blobs) {
+        val center = Offset(b.x * size.width, b.y * size.height)
+        val radius = b.r * size.maxDimension
+        drawCircle(
+            Brush.radialGradient(
+                listOf(b.color.copy(alpha = if (dark) b.darkAlpha else b.lightAlpha), Color.Transparent),
+                center, radius,
+            ),
+            radius = radius, center = center,
         )
-        // 每团光晕：中心色 → 透明，径向渐变天然柔和
-        val blobs = listOf(
-            Blob(0.18f, 0.16f, Color(0xFF7C5CFF), if (dark) 0.55f else 0.45f, 0.62f),
-            Blob(0.86f, 0.32f, Color(0xFF22D3EE), if (dark) 0.45f else 0.40f, 0.55f),
-            Blob(0.12f, 0.78f, Color(0xFF34D399), if (dark) 0.42f else 0.38f, 0.55f),
-            Blob(0.84f, 0.86f, Color(0xFFFB7185), if (dark) 0.36f else 0.32f, 0.50f),
-            Blob(0.52f, 0.52f, Color(0xFFFBBF24), if (dark) 0.26f else 0.22f, 0.38f),
-        )
-        for (b in blobs) {
-            val center = Offset(b.x * size.width, b.y * size.height)
-            val radius = b.r * size.maxDimension
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(b.color.copy(alpha = b.alpha), Color.Transparent),
-                    center, radius,
-                ),
-                radius = radius, center = center,
-            )
-        }
     }
 }
 
-private data class Blob(val x: Float, val y: Float, val color: Color, val alpha: Float, val r: Float)
+@Composable
+fun Wallpaper(modifier: Modifier = Modifier) {
+    val dark = LocalPalette.current == DarkPalette
+    val style = LocalWallpaperStyle.current
+    Canvas(modifier.fillMaxSize()) { drawWallpaper(style, dark) }
+}
+
+/** 背景小预览：同一套画法，缩到卡片里。 */
+@Composable
+fun WallpaperPreview(style: WallpaperStyle, modifier: Modifier = Modifier) {
+    val dark = LocalPalette.current == DarkPalette
+    Canvas(modifier) { drawWallpaper(style, dark) }
+}
 
 /** 玻璃圆角（dp）：glass() 的 shape 和外层 clip 必须用同一值。
  *  之前 About/设置类卡片 clip 写死 12dp、glass() 默认按 8+圆角*40 算，
