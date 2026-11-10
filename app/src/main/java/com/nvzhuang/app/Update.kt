@@ -59,9 +59,9 @@ import com.kyant.shapes.RoundedRectangle
 
 /**
  * 软件更新：弹窗是 Ludion login-lumen 的原生复刻（浅蓝底 + 近白玻璃卡 28dp 大圆角 +
- * 内容逐行浮现 + 玻璃提交按钮上斜扫的光带）；点“立即更新”开始下载，下载中按钮变
- * “更新中…”，跑满变“已更新 ✓”，1.2 秒后自动调起安装；下载中点“取消下载”可随时取消。
- * 下载中不显示进度条。
+ * 内容逐行浮现 + 玻璃提交按钮上斜扫的光带）；按钮底是真液态玻璃（和全 App 一套），
+ * 不是平铺色块。点“立即更新”开始下载，下载中按钮变“更新中…”，跑满变“已更新 ✓”，
+ * 1.2 秒后自动调起安装；下载中点“取消下载”可随时取消。下载中不显示进度条。
  * 功能：启动时自动查一次 + 关于页手动查；新版本下载到缓存后直接调起安装器覆盖安装，
  * 不用卸载旧版。覆盖安装的前提是包名相同 + 签名同一把 + versionCode 更大，
  * 本工程签名固定用同一把 keystore，且 v1+v2+v3 三种签名方案全开。
@@ -261,11 +261,13 @@ enum class UpdatePhase { IDLE, DOWNLOADING, DONE, ERROR }
 
 /**
  * lumen 提交按钮：Ludion login-lumen 的 .submit 原生版——全宽 52dp、14dp 圆角、
- * 强调色细边 + 强调色 14% 底，下载中时一道斜光带从左向右扫过玻璃面（Animatable 循环）。
+ * 强调色细边 + 真液态玻璃底（和全 App 一套玻璃，不是平铺色块），下载中时
+ * 一道斜光带从左向右扫过玻璃面（Animatable 循环）。
  */
 @Composable
-fun LumenButton(text: String, enabled: Boolean, sweeping: Boolean, onClick: () -> Unit) {
+fun LumenButton(text: String, enabled: Boolean, sweeping: Boolean, backdrop: com.kyant.backdrop.Backdrop, onClick: () -> Unit) {
     val p = LocalPalette.current
+    val glass = LocalGlassSettings.current
     val band = remember { Animatable(0f) }
     LaunchedEffect(sweeping) {
         if (sweeping) {
@@ -278,7 +280,7 @@ fun LumenButton(text: String, enabled: Boolean, sweeping: Boolean, onClick: () -
     Box(
         Modifier.fillMaxWidth().height(52.dp)
             .clip(RoundedRectangle(14.dp))
-            .background(p.accent.copy(alpha = 0.14f))
+            .glass(backdrop, glass, p.glass, radiusDp = 14f)
             .border(1.dp, p.accent, RoundedRectangle(14.dp))
             .clickable(enabled = enabled) { onClick() },
         contentAlignment = Alignment.Center,
@@ -413,6 +415,7 @@ fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClos
                     },
                     enabled = phase == UpdatePhase.IDLE || phase == UpdatePhase.ERROR,
                     sweeping = phase == UpdatePhase.DOWNLOADING,
+                    backdrop = backdrop,
                     onClick = { startDownload() },
                 )
                 if (phase == UpdatePhase.DOWNLOADING) {

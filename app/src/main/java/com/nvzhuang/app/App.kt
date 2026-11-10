@@ -709,7 +709,7 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnS
         TryOnSettingsSection("AI 试穿模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
         WallpaperSettingsBlock(backdrop, wallpaperId, onWallpaperChange)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.4.3 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.4 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)

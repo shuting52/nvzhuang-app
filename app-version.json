@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.3/Shuting-Shiyijian-1.4.3.apk","notes":{"add":["关于页新增背景选择（极光/暖阳/薄荷/粉霞/星夜，点一下全 App 生效）"],"optimize":["AI 写文案加 75 秒超时与取消按钮，不再一直转圈"],"remove":["试穿页的模型设置（关于页里还有）","关于页的内容说明、图库规模、下载说明三块"]},"versionCode":17,"versionName":"1.4.3"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.4/Shuting-Shiyijian-1.4.4.apk","notes":{"add":[],"optimize":["更新弹窗的按钮也换成液态玻璃（全 App 统一，琥珀描边与斜扫光带不变）"],"remove":[]},"versionCode":18,"versionName":"1.4.4"}
