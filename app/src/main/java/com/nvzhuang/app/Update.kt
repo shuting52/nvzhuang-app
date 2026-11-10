@@ -7,28 +7,25 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,10 +33,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
@@ -54,11 +58,10 @@ import org.json.JSONObject
 import com.kyant.shapes.RoundedRectangle
 
 /**
- * 软件更新：按钮复刻 crystal-liquid-ui-kit 的 Update 组件——
- * 白色胶囊 + 蓝色圆标 ↓，点按变宽，右侧弹出 × 可随时取消；
- * 跑满变 Updated ✓，1.2 秒后自动调起安装。
- * 下载进度不用胶囊里的蓝渐变灌满了，改成下面的磁性流体进度条（FerroProgress：
- * 玻璃管 + 黑流体 + 尖刺，跑满收拢成球），进度由 UpdateDownloader 的真实下载进度驱动。
+ * 软件更新：弹窗是 Ludion login-lumen 的原生复刻（浅蓝底 + 近白玻璃卡 28dp 大圆角 +
+ * 内容逐行浮现 + 玻璃提交按钮上斜扫的光带）；点“立即更新”开始下载，下载中按钮变
+ * “更新中…”，跑满变“已更新 ✓”，1.2 秒后自动调起安装；下载中点“取消下载”可随时取消。
+ * 下载中不显示进度条。
  * 功能：启动时自动查一次 + 关于页手动查；新版本下载到缓存后直接调起安装器覆盖安装，
  * 不用卸载旧版。覆盖安装的前提是包名相同 + 签名同一把 + versionCode 更大，
  * 本工程签名固定用同一把 keystore，且 v1+v2+v3 三种签名方案全开。
@@ -257,75 +260,90 @@ fun installApk(context: Context, file: File): Boolean {
 enum class UpdatePhase { IDLE, DOWNLOADING, DONE, ERROR }
 
 /**
- * 水晶版 Update 胶囊按钮。
- * Idle：152dp 白胶囊，蓝色圆标 ↓ + “更新”；点按 → 变宽到 202dp，
- * 右侧 × 弹出可取消；跑满 → “已更新” ✓，1.2 秒后自动调起安装。
- * 进度条不在胶囊里，下载中由下面的 FerroProgress 磁性流体管显示。
+ * lumen 提交按钮：Ludion login-lumen 的 .submit 原生版——全宽 52dp、14dp 圆角、
+ * 强调色细边 + 强调色 14% 底，下载中时一道斜光带从左向右扫过玻璃面（Animatable 循环）。
  */
 @Composable
-fun UpdatePill(
-    phase: UpdatePhase,
-    onClick: () -> Unit,
-    onCancel: () -> Unit,
-) {
+fun LumenButton(text: String, enabled: Boolean, sweeping: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
-    val downloading = phase == UpdatePhase.DOWNLOADING
-    val width by animateDpAsState(if (downloading) 202.dp else 152.dp, label = "updWidth")
-    val cancelScale by animateFloatAsState(if (downloading) 1f else 0f, label = "updCancel")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.width(width).height(54.dp).clip(RoundedCornerShape(999.dp))
-                .background(p.card)
-                .clickable(enabled = phase == UpdatePhase.IDLE) { onClick() },
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Row(
-                Modifier.padding(start = 16.dp, end = 22.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(BrandGradient),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    T(if (phase == UpdatePhase.DONE) "✓" else "↓", 16, Color.White, bold = true)
-                }
-                T(
-                    when (phase) {
-                        UpdatePhase.IDLE -> "更新"
-                        UpdatePhase.DOWNLOADING -> "更新中"
-                        UpdatePhase.DONE -> "已更新"
-                        UpdatePhase.ERROR -> "更新"
-                    },
-                    19, p.accent, bold = true,
-                )
+    val band = remember { Animatable(0f) }
+    LaunchedEffect(sweeping) {
+        if (sweeping) {
+            while (true) {
+                band.animateTo(1.2f, tween(1800, easing = LinearEasing))
+                band.snapTo(-0.2f)
             }
+        } else band.snapTo(-0.2f)
+    }
+    Box(
+        Modifier.fillMaxWidth().height(52.dp)
+            .clip(RoundedRectangle(14.dp))
+            .background(p.accent.copy(alpha = 0.14f))
+            .border(1.dp, p.accent, RoundedRectangle(14.dp))
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val bw = size.width * 0.20f
+            val x = band.value * (size.width + bw * 2f) - bw
+            val slant = size.height * 0.35f
+            val path = Path().apply {
+                moveTo(x, -slant)
+                lineTo(x + bw, -slant)
+                lineTo(x + bw - slant, size.height + slant)
+                lineTo(x - slant, size.height + slant)
+                close()
+            }
+            drawPath(path, Color.White.copy(alpha = 0.30f))
         }
-        // × 取消（下载中才出现，-15dp 重叠）
-        Box(
-            Modifier.offset(x = (-15).dp).size(54.dp)
-                .graphicsLayer { scaleX = cancelScale; scaleY = cancelScale; alpha = cancelScale }
-                .clip(CircleShape).background(p.card)
-                .clickable(enabled = downloading) { onCancel() },
-            contentAlignment = Alignment.Center,
-        ) { T("×", 25, p.text) }
+        BasicText(
+            text,
+            style = TextStyle(color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+        )
     }
 }
 
-/** 发现新版本弹窗：版本说明按“优化 / 删除 / 增加”三段写，空段写“无”。 */
+/** lumen 下划线链接按钮（login-lumen 的 .link）：取消下载 / 稍后再说用。 */
+@Composable
+fun LumenLink(text: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    BasicText(
+        text,
+        modifier = Modifier.clickable { onClick() }.padding(vertical = 6.dp),
+        style = TextStyle(
+            color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            textDecoration = TextDecoration.Underline,
+        ),
+    )
+}
+
+/**
+ * 发现新版本弹窗：Ludion login-lumen 的原生复刻（不塞 HTML、无 WebView；
+ * WebGL 的海底都市场景做不到 1:1，取它的神：浅蓝底 + 近白玻璃卡 28dp 大圆角 +
+ * 内容逐行浮现 + 玻璃提交按钮上斜扫的光带）。注意 login-lumen 原本是登录页
+ * （邮箱/密码表单），这里只取它的视觉语言做更新弹窗，内容仍是更新本身：
+ * 版本说明按“优化 / 删除 / 增加”三段写，空段写“无”。下载中不显示进度条，
+ * 按钮变成“更新中…”就是下载中的提示；跑满变“已更新 ✓”，1.2 秒后自动调起安装。
+ */
 @Composable
 fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
+    val dark = p == DarkPalette
     var phase by remember { mutableStateOf(UpdatePhase.IDLE) }
-    var progress by remember { mutableFloatStateOf(0f) }
     var error by remember { mutableStateOf("") }
     var apkFile by remember { mutableStateOf<File?>(null) }
     val downloader = remember { UpdateDownloader() }
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
 
-    // 跑满变 Updated，1.2 秒后自动调起安装（复刻 kit 的复位节奏）
+    // 逐行浮现：标题 → 说明 → 按钮，间隔 90ms（login-lumen 的 rise）
+    val a0 by animateFloatAsState(if (shown) 1f else 0f, tween(480, delayMillis = 0), label = "rise0")
+    val a1 by animateFloatAsState(if (shown) 1f else 0f, tween(480, delayMillis = 90), label = "rise1")
+    val a2 by animateFloatAsState(if (shown) 1f else 0f, tween(480, delayMillis = 180), label = "rise2")
+
     LaunchedEffect(phase) {
         if (phase == UpdatePhase.DONE) {
             delay(1200)
@@ -336,64 +354,79 @@ fun UpdateDialog(info: UpdateInfo, backdrop: com.kyant.backdrop.Backdrop, onClos
 
     fun startDownload() {
         phase = UpdatePhase.DOWNLOADING
-        progress = 0f
         error = ""
         scope.launch {
             val dir = File(context.cacheDir, "updates").apply { if (!exists()) mkdirs() }
             val dest = File(dir, "Shuting-Shiyijian-${info.versionName}.apk")
-            val result = downloader.download(info.apkUrl, dest) { p -> progress = p }
+            val result = downloader.download(info.apkUrl, dest) { }
             result.onSuccess {
                 apkFile = it
                 phase = UpdatePhase.DONE
             }.onFailure {
                 phase = if (it.message == "CANCELLED") UpdatePhase.IDLE else UpdatePhase.ERROR
                 if (it.message != "CANCELLED") error = it.message ?: "下载失败"
-                progress = 0f
             }
         }
     }
 
+    fun rise(alpha: Float) = Modifier.graphicsLayer {
+        this.alpha = alpha
+        translationY = (1f - alpha) * 10.dp.toPx()
+    }
+
     Box(
-        Modifier.fillMaxSize().background(Color(0x99000000)),
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(
+                if (dark) listOf(Color(0x99000000), Color(0xCC000000))
+                else listOf(Color(0xFFE9EEF6).copy(alpha = 0.55f), Color(0xFF10182B).copy(alpha = 0.72f)),
+            ),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            Modifier.fillMaxWidth(0.88f).clip(RoundedRectangle(16.dp))
-                .glass(backdrop, glass, p.glass, radiusDp = 16f)
-                .padding(18.dp),
+            Modifier.fillMaxWidth(0.88f).clip(RoundedRectangle(28.dp))
+                .glass(backdrop, glass, p.glass, radiusDp = 28f)
+                .padding(horizontal = 20.dp, vertical = 22.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            T("发现新版本 ${info.versionName}", 18, bold = true)
-            Column(
-                Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            Column(Modifier.fillMaxWidth().then(rise(a0)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                T("发现新版本 ${info.versionName}", 20, bold = true)
+                T("新版本已就绪，更新后继续使用。", 14, p.muted)
+            }
+            Column(Modifier.fillMaxWidth().then(rise(a1)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 UpdateNoteSection("优化", info.notes.optimize)
                 UpdateNoteSection("删除", info.notes.remove)
                 UpdateNoteSection("增加", info.notes.add)
             }
-            UpdatePill(
-                phase = phase,
-                onClick = { startDownload() },
-                onCancel = {
-                    downloader.cancel()
-                    Toast.makeText(context, "已取消更新", Toast.LENGTH_SHORT).show()
-                },
-            )
-            // 磁性流体下载进度条：下载中 / 跑满时显示，接真实下载进度
-            if (phase == UpdatePhase.DOWNLOADING || phase == UpdatePhase.DONE) {
-                FerroProgress(
-                    progress = if (phase == UpdatePhase.DONE) 1f else progress,
-                    done = phase == UpdatePhase.DONE,
-                    modifier = Modifier.fillMaxWidth(),
+            Column(
+                Modifier.fillMaxWidth().then(rise(a2)),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                LumenButton(
+                    text = when (phase) {
+                        UpdatePhase.IDLE -> "立即更新"
+                        UpdatePhase.DOWNLOADING -> "更新中…"
+                        UpdatePhase.DONE -> "已更新 ✓"
+                        UpdatePhase.ERROR -> "重新下载"
+                    },
+                    enabled = phase == UpdatePhase.IDLE || phase == UpdatePhase.ERROR,
+                    sweeping = phase == UpdatePhase.DOWNLOADING,
+                    onClick = { startDownload() },
                 )
-            }
-            if (phase == UpdatePhase.ERROR && error.isNotEmpty()) {
-                T(error, 13, Color(0xFFE5484D))
-            }
-            if (phase == UpdatePhase.IDLE || phase == UpdatePhase.ERROR) {
-                ActionButton("稍后再说", false, onClose, Modifier.fillMaxWidth(), backdrop = backdrop)
+                if (phase == UpdatePhase.DOWNLOADING) {
+                    LumenLink("取消下载") {
+                        downloader.cancel()
+                        Toast.makeText(context, "已取消更新", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                if (phase == UpdatePhase.ERROR && error.isNotEmpty()) {
+                    T(error, 13, Color(0xFFE5484D))
+                }
+                if (phase == UpdatePhase.IDLE || phase == UpdatePhase.ERROR) {
+                    LumenLink("稍后再说", onClose)
+                }
             }
         }
     }

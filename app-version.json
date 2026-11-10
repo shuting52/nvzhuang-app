@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.1/Shuting-Shiyijian-1.4.1.apk","notes":{"add":["收藏版块新增提示词库（177 条 AI 生图/视频提示词，支持分类、搜索、展开、复制）"],"optimize":[],"remove":[]},"versionCode":15,"versionName":"1.4.1"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.2/Shuting-Shiyijian-1.4.2.apk","notes":{"add":["收藏改名“提示词库”","关于页新增 AI 试穿模型设置（与试穿页同一份设置，改一处两边同步）"],"optimize":["更新弹窗换成全新液态玻璃样式（Ludion login-lumen 风格，原生复刻）"],"remove":["更新下载进度条（磁性流体条已删）"]},"versionCode":16,"versionName":"1.4.2"}

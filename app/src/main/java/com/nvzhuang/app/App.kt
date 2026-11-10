@@ -244,7 +244,7 @@ fun NvzhuangApp() {
     val scope = rememberCoroutineScope()
     var repo by remember { mutableStateOf<Repo?>(null) }
     var dark by remember { mutableStateOf(loadDark(context)) }
-    var tab by remember { mutableIntStateOf(0) } // 0 图库 1 试穿 2 收藏 3 关于
+    var tab by remember { mutableIntStateOf(0) } // 0 图库 1 试穿 2 提示词库 3 关于
     var tryOnGarment by remember { mutableStateOf<Item?>(null) }
     var glassSettings by remember {
         migrateGlassSettings138(context)
@@ -257,6 +257,7 @@ fun NvzhuangApp() {
     var shuffled by remember { mutableStateOf(false) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var favs by remember { mutableStateOf(loadFavs(context)) }
+    var tryOnSettings by remember { mutableStateOf(loadTryOnSettings(context)) }
     var prompts by remember { mutableStateOf<List<PromptItem>>(emptyList()) }
     var detailList by remember { mutableStateOf<List<Item>>(emptyList()) }
     var detailIndex by remember { mutableIntStateOf(-1) }
@@ -331,6 +332,7 @@ fun NvzhuangApp() {
                         )
                         1 -> TryOnTab(
                             repo = r, garment = tryOnGarment, backdrop = backdrop,
+                            settings = tryOnSettings, onSettingsChange = { tryOnSettings = it },
                             onGarmentChange = { tryOnGarment = it },
                             modifier = Modifier.weight(1f),
                         )
@@ -342,6 +344,7 @@ fun NvzhuangApp() {
                         3 -> AboutTab(
                             Modifier.weight(1f),
                             backdrop = backdrop,
+                            settings = tryOnSettings, onSettingsChange = { tryOnSettings = it },
                             onGlassChange = { glassSettings = it; saveGlassSettings(context, it) },
                         )
                     }
@@ -349,7 +352,7 @@ fun NvzhuangApp() {
                 }
             }
             // 底部悬浮玻璃胶囊 Tab（boli 同款 LiquidBottomTabs：点按切换，也可长按拖动指示块切换）
-            val tabLabels = listOf("图库" to "🖼️", "AI 试穿" to "👗", "收藏" to "♥️", "关于" to "ℹ️")
+            val tabLabels = listOf("图库" to "🖼️", "AI 试穿" to "👗", "提示词库" to "📝", "关于" to "ℹ️")
             LiquidBottomTabs(
                 selectedTabIndex = { tab },
                 onTabSelected = { tab = it },
@@ -677,7 +680,7 @@ fun PromptCard(item: PromptItem, expanded: Boolean, backdrop: Backdrop, onToggle
 }
 
 @Composable
-fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (GlassSettings) -> Unit) {
+fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGlassChange: (GlassSettings) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val p = LocalPalette.current
@@ -714,8 +717,9 @@ fun AboutTab(modifier: Modifier = Modifier, backdrop: Backdrop, onGlassChange: (
         )
         ActionButton("在浏览器打开原站", true, { openUrl(context, "https://paipiange.github.io/nvzhuang/") }, Modifier.fillMaxWidth())
         AiSettingsBlock(backdrop)
+        TryOnSettingsSection("AI 试穿模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
         GlassSettingsBlock(backdrop, onGlassChange)
-        T("淑婷试衣间 v1.4.1 · 原生 App", 12, p.muted)
+        T("淑婷试衣间 v1.4.2 · 原生 App", 12, p.muted)
         // 软件更新
         Column(
             Modifier.fillMaxWidth().clip(RoundedRectangle(glassRadiusDp(glass).dp)).glass(backdrop, glass, p.glass)

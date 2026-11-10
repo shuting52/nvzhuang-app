@@ -386,12 +386,11 @@ fun findGarmentById(repo: Repo, id: String): Item? {
 // ---------- 试穿 Tab 界面 ----------
 
 @Composable
-fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (Item?) -> Unit, modifier: Modifier = Modifier) {
+fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, onGarmentChange: (Item?) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val p = LocalPalette.current
     val glass = LocalGlassSettings.current
-    var settings by remember { mutableStateOf(loadTryOnSettings(context)) }
     var personB64 by remember { mutableStateOf<String?>(null) }
     var personPreview by remember { mutableStateOf<Any?>(null) }
     var personLabel by remember { mutableStateOf("") }
@@ -542,37 +541,8 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
         }
         Spacer(Modifier.height(12.dp))
 
-        // 模型设置
-        TryOnSection("3 · 模型设置（自定义 Key）", backdrop) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (provider in TryOnProvider.entries) {
-                    Chip(provider.label, settings.provider == provider, backdrop) {
-                        val defaults = defaultTryOnSettings(provider)
-                        settings = settings.copy(
-                            provider = provider, baseUrl = defaults.baseUrl, model = defaults.model,
-                        )
-                        saveSettings()
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            AiField("Base URL", settings.baseUrl, false) { settings = settings.copy(baseUrl = it) }
-            AiField("API Key", settings.apiKey, true) { settings = settings.copy(apiKey = it) }
-            AiField("模型名", settings.model, false) { settings = settings.copy(model = it) }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionButton("保存设置", true, {
-                    saveSettings()
-                    Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
-                }, Modifier.weight(1f))
-                ActionButton("恢复默认", false, {
-                    settings = defaultTryOnSettings(settings.provider).copy(apiKey = settings.apiKey)
-                    saveSettings()
-                }, Modifier.weight(1f), backdrop = backdrop)
-            }
-            Spacer(Modifier.height(6.dp))
-            T("要生图模型才能试穿：Gemini 填 Nano Banana 模型、豆包填 Seedream、OpenAI 兼容填 gpt-image-1 这类。纯文字 Key（如 DeepSeek）做不了试穿。", 12, p.muted)
-        }
+        // 模型设置（与关于页共用同一份设置）
+        TryOnSettingsSection("3 · 模型设置（自定义 Key）", settings, onSettingsChange, backdrop)
         Spacer(Modifier.height(12.dp))
 
         // 生成
@@ -674,6 +644,45 @@ fun TryOnTab(repo: Repo, garment: Item?, backdrop: Backdrop, onGarmentChange: (I
             },
             onClose = { showModelPicker = false },
         )
+    }
+}
+
+/** 试穿的模型设置（自定义 Key）：试穿页与关于页共用同一份设置，改一处两边同步。 */
+@Composable
+fun TryOnSettingsSection(title: String, settings: TryOnSettings, onSettingsChange: (TryOnSettings) -> Unit, backdrop: Backdrop) {
+    val context = LocalContext.current
+    val p = LocalPalette.current
+    TryOnSection(title, backdrop) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (provider in TryOnProvider.entries) {
+                Chip(provider.label, settings.provider == provider, backdrop) {
+                    val defaults = defaultTryOnSettings(provider)
+                    val next = settings.copy(
+                        provider = provider, baseUrl = defaults.baseUrl, model = defaults.model,
+                    )
+                    onSettingsChange(next)
+                    saveTryOnSettings(context, next)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        AiField("Base URL", settings.baseUrl, false) { onSettingsChange(settings.copy(baseUrl = it)) }
+        AiField("API Key", settings.apiKey, true) { onSettingsChange(settings.copy(apiKey = it)) }
+        AiField("模型名", settings.model, false) { onSettingsChange(settings.copy(model = it)) }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton("保存设置", true, {
+                saveTryOnSettings(context, settings)
+                Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
+            }, Modifier.weight(1f))
+            ActionButton("恢复默认", false, {
+                val next = defaultTryOnSettings(settings.provider).copy(apiKey = settings.apiKey)
+                onSettingsChange(next)
+                saveTryOnSettings(context, next)
+            }, Modifier.weight(1f), backdrop = backdrop)
+        }
+        Spacer(Modifier.height(6.dp))
+        T("要生图模型才能试穿：Gemini 填 Nano Banana 模型、豆包填 Seedream、OpenAI 兼容填 gpt-image-1 这类。纯文字 Key（如 DeepSeek）做不了试穿。", 12, p.muted)
     }
 }
 
