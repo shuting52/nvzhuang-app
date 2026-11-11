@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.6/Shuting-Shiyijian-1.4.6.apk","notes":{"add":[],"optimize":["按钮组件全部换成液态玻璃（分类 Chip、模式切换、主按钮、收藏按钮都改成玻璃底，选中与主按钮用琥珀描边加琥珀文字区分）"],"remove":[]},"versionCode":20,"versionName":"1.4.6"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.4.7/Shuting-Shiyijian-1.4.7.apk","notes":{"add":["新增“姿势”版块：1439 条 AI 姿势参考（体系/分类/搜索/详情多角度切换/下载原图）"],"optimize":[],"remove":[]},"versionCode":21,"versionName":"1.4.7"}
