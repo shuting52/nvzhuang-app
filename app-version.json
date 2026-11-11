@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.6.1/Shuting-Shiyijian-1.6.1.apk","notes":{"add":[],"optimize":["提示词视频播放改成先下载到本地再播（带下载进度），不再黑屏干等；在线回落时也有加载/缓冲提示"],"remove":[]},"versionCode":27,"versionName":"1.6.1"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.0/Shuting-Shiyijian-1.7.0.apk","notes":{"add":["新增「实验室」Tab：可拖动的大玻璃块，实时调圆角/模糊/折射高度/折射强度/色散"],"optimize":["液态玻璃按 boli（懒得找了）完整复刻：折射透镜玻璃 + 绿→天蓝→靛蓝壁纸 + 液态玻璃底栏/按钮/更新弹窗"],"remove":["撤掉 v1.6.0 的白透面板玻璃，换回 Backdrop 折射玻璃"]},"versionCode":28,"versionName":"1.7.0"}
