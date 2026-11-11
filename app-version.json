@@ -1,1 +1,17 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.0/Shuting-Shiyijian-1.7.0.apk","notes":{"add":["新增「实验室」Tab：可拖动的大玻璃块，实时调圆角/模糊/折射高度/折射强度/色散"],"optimize":["液态玻璃按 boli（懒得找了）完整复刻：折射透镜玻璃 + 绿→天蓝→靛蓝壁纸 + 液态玻璃底栏/按钮/更新弹窗"],"remove":["撤掉 v1.6.0 的白透面板玻璃，换回 Backdrop 折射玻璃"]},"versionCode":28,"versionName":"1.7.0"}
+{
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.1/Shuting-Shiyijian-1.7.1.apk",
+  "notes": {
+    "optimize": [
+      "「实验室」从底栏移到关于页里；实验室进度条整条轨道都能直接拖着改数值（触摸区加高到 40dp，按下即跳 + 拖动跟随）",
+      "下载 Tab：图片列表加预览图；进下载页自动识别剪贴板链接填充；新增自动解析/自动下载开关"
+    ],
+    "remove": [
+      "底栏去掉「实验室」Tab，剩 6 个"
+    ],
+    "add": [
+      "提示词库新增「ChatGPT 玩法」：boli Prompt与Skill社区 75 张卡，卡片按 boli 写法（图标+标题+角标+简介），点开跳原站；关于页新增自定义背景（自选图片做 App 背景）与打赏支持（微信/支付宝收款码）"
+    ]
+  },
+  "versionCode": 29,
+  "versionName": "1.7.1"
+}
