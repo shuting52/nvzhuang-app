@@ -1,20 +1,17 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.3/Shuting-Shiyijian-1.7.3.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.4/Shuting-Shiyijian-1.7.4.apk",
   "notes": {
     "optimize": [
-      "全站按钮统一成液态玻璃：主按钮不再是实心蓝底，实验室展开/重置与返回按钮也一样",
-      "下载开关默认打开：自动解析、自动下载首次打开即开",
-      "小红书 Cookie 卡改成显眼提示，加获取教程（点开看步骤）",
-      "AI 文案与试穿设置加显眼提示、获取教程与对应 API 平台直连",
-      "打赏去掉软件内添加/更换二维码的入口，只展示 App 自带的收款码"
+      "提示词库拆成两个独立版块：提示词库与 ChatGPT 玩法不再混在一个页面，点分类卡片进入各自专属页",
+      "新增「发型」版块：发型设计参考，分女士/男士，点开看大图、可保存到本地"
     ],
     "remove": [
-      "删掉打赏卡里「点这里添加」与二维码弹窗里的「更换收款码」"
+      "提示词库页去掉「ChatGPT 玩法」分类切换入口（改走独立版块）"
     ],
     "add": [
-      "无"
+      "新增「发型」版块：首批 10 款女士发型参考（男士暂无收录，等发图）"
     ]
   },
-  "versionCode": 31,
-  "versionName": "1.7.3"
+  "versionCode": 32,
+  "versionName": "1.7.4"
 }
