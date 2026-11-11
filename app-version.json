@@ -1,17 +1,20 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.1/Shuting-Shiyijian-1.7.1.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.2/Shuting-Shiyijian-1.7.2.apk",
   "notes": {
     "optimize": [
-      "「实验室」从底栏移到关于页里；实验室进度条整条轨道都能直接拖着改数值（触摸区加高到 40dp，按下即跳 + 拖动跟随）",
-      "下载 Tab：图片列表加预览图；进下载页自动识别剪贴板链接填充；新增自动解析/自动下载开关"
+      "提示词库「ChatGPT 玩法」换成真正的 boli 玩法库：89 类、703 条，点卡片复制玩法说明",
+      "实验室改成全局实时同步：圆角/模糊/折射/色散一拖，全 App 的卡片、底栏、弹窗立刻跟着变，重启还在",
+      "输入框的白色底改成液态玻璃（AI 文案与试穿设置）",
+      "下载 Tab：新增微博解析；视频弹窗去掉文字标签，视频可保存到本地",
+      "自定义背景支持视频（循环静音播放）；打赏按 boli 的做法改成两行 + 二维码弹窗"
     ],
     "remove": [
-      "底栏去掉「实验室」Tab，剩 6 个"
+      "删掉提示词库里错误的站点卡片版「ChatGPT 玩法」"
     ],
     "add": [
-      "提示词库新增「ChatGPT 玩法」：boli Prompt与Skill社区 75 张卡，卡片按 boli 写法（图标+标题+角标+简介），点开跳原站；关于页新增自定义背景（自选图片做 App 背景）与打赏支持（微信/支付宝收款码）"
+      "下载 Tab 新增小红书解析（需在下方贴登录后的 web_session Cookie）"
     ]
   },
-  "versionCode": 29,
-  "versionName": "1.7.1"
+  "versionCode": 30,
+  "versionName": "1.7.2"
 }
