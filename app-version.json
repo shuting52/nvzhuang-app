@@ -1,1 +1,1 @@
-{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.5.0/Shuting-Shiyijian-1.5.0.apk","notes":{"add":["关于页新增实用工具：云析桌面版（网盘/视频链接解析下载）"],"optimize":[],"remove":[]},"versionCode":24,"versionName":"1.5.0"}
+{"apkUrl":"https://github.com/shuting52/nvzhuang-app/releases/download/v1.5.1/Shuting-Shiyijian-1.5.1.apk","notes":{"add":["新增「下载」Tab：B 站/快手/AcFun 视频解析下载 + 文件直链下载"],"optimize":[],"remove":["关于页云析桌面版链接卡片（已由下载 Tab 替代）"]},"versionCode":25,"versionName":"1.5.1"}
