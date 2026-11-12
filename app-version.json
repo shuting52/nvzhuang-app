@@ -1,17 +1,18 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.4/Shuting-Shiyijian-1.7.4.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.5/Shuting-Shiyijian-1.7.5.apk",
   "notes": {
     "optimize": [
-      "提示词库拆成两个独立版块：提示词库与 ChatGPT 玩法不再混在一个页面，点分类卡片进入各自专属页",
-      "新增「发型」版块：发型设计参考，分女士/男士，点开看大图、可保存到本地"
+      "更新弹窗改回之前的固定玻璃样式",
+      "提示词库的两个分类改成横排并列",
+      "底部 Tab 栏改成自动增长：Tab 多了自动变长，装不下就左右滑"
     ],
     "remove": [
-      "提示词库页去掉「ChatGPT 玩法」分类切换入口（改走独立版块）"
+      "发型版块撤掉随安装包内置的参考图（10 张）"
     ],
     "add": [
-      "新增「发型」版块：首批 10 款女士发型参考（男士暂无收录，等发图）"
+      "发型版块改成文字版参考：发型名 + 标签，点开可复制发型名"
     ]
   },
-  "versionCode": 32,
-  "versionName": "1.7.4"
+  "versionCode": 33,
+  "versionName": "1.7.5"
 }
