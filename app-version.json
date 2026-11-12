@@ -1,14 +1,12 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.9/Shuting-Shiyijian-1.7.9.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.10/Shuting-Shiyijian-1.7.10.apk",
   "notes": {
     "optimize": [
-      "更新弹窗换回第二版（登录页 login-lumen 风格）：浅蓝底 + 近白玻璃卡 + 内容逐行浮现 + 玻璃提交按钮斜扫光带"
+      "发型去重：图库 893 款按发型名去重，只留 50 款长得不一样的；女士精选 10 款换成不同长度/造型，不再全是长发"
     ],
     "remove": [],
-    "add": [
-      "发型版块补上男士发型 10 款（AI 生成预览图），男士分类不再是空的"
-    ]
+    "add": []
   },
-  "versionCode": 37,
-  "versionName": "1.7.9"
+  "versionCode": 38,
+  "versionName": "1.7.10"
 }
