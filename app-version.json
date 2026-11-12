@@ -1,18 +1,14 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.5/Shuting-Shiyijian-1.7.5.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.6/Shuting-Shiyijian-1.7.6.apk",
   "notes": {
     "optimize": [
-      "更新弹窗改回之前的固定玻璃样式",
-      "提示词库的两个分类改成横排并列",
-      "底部 Tab 栏改成自动增长：Tab 多了自动变长，装不下就左右滑"
+      "底部 Tab 栏改回一屏放得下：7 个 Tab 平分宽度，不再拖出屏幕"
     ],
-    "remove": [
-      "发型版块撤掉随安装包内置的参考图（10 张）"
-    ],
+    "remove": [],
     "add": [
-      "发型版块改成文字版参考：发型名 + 标签，点开可复制发型名"
+      "发型版块补上 AI 生成的预览图（10 款）：点开看大图、可保存到本地、可复制发型名"
     ]
   },
-  "versionCode": 33,
-  "versionName": "1.7.5"
+  "versionCode": 34,
+  "versionName": "1.7.6"
 }
