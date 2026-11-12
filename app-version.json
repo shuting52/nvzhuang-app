@@ -1,15 +1,14 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.8/Shuting-Shiyijian-1.7.8.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.9/Shuting-Shiyijian-1.7.9.apk",
   "notes": {
     "optimize": [
-      "发型版块接进图库：893 款带中文名的发型，在线加载，按发长筛选、可搜名字"
+      "更新弹窗换回第二版（登录页 login-lumen 风格）：浅蓝底 + 近白玻璃卡 + 内容逐行浮现 + 玻璃提交按钮斜扫光带"
     ],
     "remove": [],
     "add": [
-      "新增「换发型试试」：选一款发型、传自己照片，AI 换发型模拟（走 AI 试穿同一套模型 Key）",
-      "发型版块新增发长筛选（短发/中发/中长发/长发）与搜索"
+      "发型版块补上男士发型 10 款（AI 生成预览图），男士分类不再是空的"
     ]
   },
-  "versionCode": 36,
-  "versionName": "1.7.8"
+  "versionCode": 37,
+  "versionName": "1.7.9"
 }
