@@ -1,12 +1,12 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.10/Shuting-Shiyijian-1.7.10.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.11/Shuting-Shiyijian-1.7.11.apk",
   "notes": {
-    "optimize": [
-      "发型去重：图库 893 款按发型名去重，只留 50 款长得不一样的；女士精选 10 款换成不同长度/造型，不再全是长发"
-    ],
+    "optimize": [],
     "remove": [],
-    "add": []
+    "add": [
+      "图库新增「霧島澪」分类：40 卷 360 件（姿势 23 卷 207 件、服装 11 卷 99 件、发型 6 卷 54 件），按系列/卷/关键词分类浏览，每件带中文说明与可复制的 AI 提示词"
+    ]
   },
-  "versionCode": 38,
-  "versionName": "1.7.10"
+  "versionCode": 39,
+  "versionName": "1.7.11"
 }
