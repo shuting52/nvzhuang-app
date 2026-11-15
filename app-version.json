@@ -1,12 +1,12 @@
 {
-  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.12/Shuting-Shiyijian-1.7.12.apk",
+  "apkUrl": "https://github.com/shuting52/nvzhuang-app/releases/download/v1.7.13/Shuting-Shiyijian-1.7.13.apk",
   "notes": {
     "optimize": [],
-    "remove": [
-      "删除「发型」版块（精选 20 款 + 图库 50 款 + 换发型试试），底栏回到 6 个 Tab"
-    ],
-    "add": []
+    "remove": [],
+    "add": [
+      "提示词库新增 True JPEG 188 条（真人写真 119 / 动漫 67 / 海报 2 / Feian 4，SeeDream 5.0 Pro，搜「True JPEG」可找到），总数 177 → 365 条"
+    ]
   },
-  "versionCode": 40,
-  "versionName": "1.7.12"
+  "versionCode": 41,
+  "versionName": "1.7.13"
 }
